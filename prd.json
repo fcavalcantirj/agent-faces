@@ -1,0 +1,874 @@
+[
+  {
+    "category": "infra",
+    "description": "Initialize claude-faces repo and top-level folder layout",
+    "steps": [
+      "Run git init in the claude-faces repo root and set the default branch to main.",
+      "Create the top-level directory skeleton: app/, components/, lib/, public/, docs/, skill/agent-face/{references,scripts,assets}, and .github/workflows/.",
+      "Add .gitignore covering node_modules, .next/, out/, .env, .env*.local, .vercel/, coverage/, public/models/, .DS_Store, *.tsbuildinfo.",
+      "Add LICENSE (MIT, current year, Felipe Cavalcanti) since the skill frontmatter declares license: MIT.",
+      "Add .nvmrc pinning Node 22 (Next.js 16 requirement) and .editorconfig (2-space indent, LF, final newline).",
+      "Add a placeholder prd.json at repo root ([]) — this is the project deliverable, finalized by the last task.",
+      "Choose npm as the canonical package manager for maximum cross-harness portability; record the choice in docs/decisions.md.",
+      "Add a minimal README.md stub (title + one-line description) to be expanded by the README task.",
+      "Verify: ls shows app/ components/ lib/ public/ skill/ docs/ .github/ and prd.json, LICENSE, .gitignore present.",
+      "Verify: git status runs cleanly and node -e require('fs').readFileSync('prd.json') parses prd.json as a valid JSON array."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Scaffold Next.js 16 + React 19 + TypeScript + Tailwind v4 base config",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Initialize claude-faces repo and top-level folder layout'.",
+      "Create package.json named claude-faces (private) with scripts: dev (next dev), build (next build), start (next start), lint (eslint .), typecheck (tsc --noEmit).",
+      "Add dependencies: next@16, react@^19, react-dom@^19, three@^0.185, @react-three/fiber@^9, @react-three/drei@^10, class-variance-authority, clsx, tailwind-merge, lucide-react.",
+      "Add devDependencies: typescript, @types/node, @types/react, @types/react-dom, @types/three, tailwindcss@^4, @tailwindcss/postcss, postcss, eslint, eslint-config-next.",
+      "Create tsconfig.json (paths alias @/*, strict, bundler moduleResolution, jsx react-jsx) and next-env.d.ts.",
+      "Create next.config.mjs (images.unoptimized true; COOP/COEP headers added by a later task) and postcss.config.mjs (@tailwindcss/postcss).",
+      "Create app/globals.css (Tailwind v4 @import 'tailwindcss' + dark theme tokens) and app/layout.tsx with neutral metadata (title 'Agent Face').",
+      "Create vercel.json (framework nextjs; per-function maxDuration for app/api/chat, app/api/transcribe, app/api/tts) so deploy config exists before the routes.",
+      "Run npm install and commit the generated package-lock.json.",
+      "Verify: npm run typecheck passes with no errors.",
+      "Verify: npm run build completes and produces a .next/ build."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Port the EIDOLON particle face component and neutralize branding",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Scaffold Next.js 16 + React 19 + TypeScript + Tailwind v4 base config'.",
+      "Copy lib/face-points.ts from the fuguFaces reference (READ-ONLY source — copy out, never modify it): 12 emotions, COUNTS head/eye/mouth/brow, RANGES, EMOTION_META, buildTargets, TOTAL (~4,700 particles).",
+      "Copy components/agent-face.tsx (R3F Canvas + ParticleFace + Dust + OrbitControls), components/face-hud.tsx, and lib/utils.ts.",
+      "In face-hud.tsx, rename the hardcoded 'EIDOLON-01 / SPIKE v0.1' HUD label to a neutral configurable title (default 'AGENT FACE'); keep the 1-0/Q/W emotion keyboard shortcuts.",
+      "grep the copied files for hermes/Hermes/EIDOLON and genericize residual references.",
+      "Confirm the 12 emotions still enumerate: neutral, thinking, speaking, happy, alert, sad, angry, surprised, confused, sleepy, love, glitch.",
+      "Verify: npm run typecheck passes after the copy.",
+      "Verify: temporarily mount AgentFace with emotion='neutral', run npm run dev, and confirm the particle face renders and all 12 emotions cycle via keys 1-0/Q/W with no console errors."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Rebrand public assets, favicon, and layout metadata",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Scaffold Next.js 16 + React 19 + TypeScript + Tailwind v4 base config'.",
+      "Replace fuguFaces-specific icons in public/ with neutral ones: icon.svg, icon-light-32x32.png, icon-dark-32x32.png, apple-icon.png (no Claude/Anthropic/Hermes marks).",
+      "Add public/og.png (1200x630) social preview placeholder and public/screenshots/{hero.png,talking.png} placeholders referenced by the README.",
+      "Update app/layout.tsx metadata: title 'Agent Face', a description of a talking, lip-syncing agent face, and icon wiring to the new assets.",
+      "Ensure no asset filename or alt text contains 'claude', 'anthropic', or 'hermes'.",
+      "Verify: npm run build succeeds and favicon/OG references resolve (no 404s in npm run dev).",
+      "Verify: grep -ri for claude/anthropic/hermes over public/ and app/layout.tsx returns no branding hits."
+    ],
+    "passes": false
+  },
+  {
+    "category": "infra",
+    "description": "Define the provider env contract and .env.example with graceful degradation",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Scaffold Next.js 16 + React 19 + TypeScript + Tailwind v4 base config'.",
+      "Create .env.example. Mode A chat keys (all optional): ANTHROPIC_API_KEY, ANTHROPIC_DEFAULT_MODEL, OPENROUTER_API_KEY, OPENROUTER_DEFAULT_MODEL, GROQ_API_KEY, GROQ_DEFAULT_MODEL, OPENAI_API_KEY.",
+      "Mode B agent-bridge (optional): AGENT_BRIDGE_KIND (hermes|openclaw|claude-code|ollama|openai-compatible), AGENT_BRIDGE_URL, AGENT_BRIDGE_KEY, AGENT_BRIDGE_MODEL; plus fuguFaces-compatible HERMES_API_BASE_URL and HERMES_API_KEY.",
+      "STT + deploy knobs: OPENAI_TRANSCRIBE_MODEL (default whisper-1), OPENAI_TRANSCRIBE_LANGUAGE, OPENAI_TRANSCRIBE_PROMPT, SELF_HOST, ALLOW_AGENT_BRIDGE_IN_PROD.",
+      "Document in comments that every key is optional and the app degrades gracefully: no chat brain -> friendly 'configure a brain' message; no OPENAI/GROQ key -> browser Whisper STT + Web Speech TTS; agent-bridge appears only when its endpoint is reachable.",
+      "Write docs/env-contract.md specifying the chat-brain selection priority (explicit user pick, else ANTHROPIC -> OPENROUTER -> GROQ -> agent-bridge) and the exact env names so check-env.mjs and backends.md stay consistent.",
+      "State the security rule: all keys are server-side only; never NEXT_PUBLIC_*.",
+      "Verify: grep NEXT_PUBLIC .env.example returns nothing (no secret is client-exposed).",
+      "Verify: .env.example lists all Mode A + Mode B keys plus the transcription knobs and a degradation note."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "🚨 URGENT: Add cross-origin isolation headers so browser Whisper (transformers.js/WebGPU) can run",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Scaffold Next.js 16 + React 19 + TypeScript + Tailwind v4 base config'.",
+      "Edit next.config.mjs to add an async headers() returning Cross-Origin-Opener-Policy: same-origin and Cross-Origin-Embedder-Policy: require-corp (or credentialless) for all routes, enabling SharedArrayBuffer for WASM threads.",
+      "Add Permissions-Policy: microphone=(self) so getUserMedia is not blocked.",
+      "Self-host model files under public/models or set Cross-Origin-Resource-Policy so the Hugging Face CDN fetch does not fail under COEP; switch to credentialless if an embed breaks.",
+      "Confirm Vercel Analytics, OrbitControls, and fonts still load under COEP.",
+      "Add a comment marking these headers as load-bearing for the browser-Whisper path.",
+      "Verify: in devtools console self.crossOriginIsolated is true on the app origin.",
+      "Verify: navigator.gpu resolves an adapter in Chrome/Edge without a COEP error.",
+      "Verify: the particle face still renders with the new headers applied."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Build the shared Web Audio graph and wawa-lipsync amplitude/viseme engine",
+    "steps": [
+      "Add dependency wawa-lipsync; run npm install.",
+      "Create lib/audio/context.ts exporting a lazily-created singleton AudioContext plus resumeAudio() that must be called from a user gesture (autoplay policy).",
+      "Create lib/lipsync.ts wrapping wawa-lipsync: createLipsync({fftSize, historySize}); connectMediaElement(el), connectStream(stream), processFrame() (call each rAF), getFeatures() returning {volume 0..1, viseme, visemeScores}.",
+      "Route all TTS/audio through the single AudioContext so the AnalyserNode taps exactly the audible audio (source -> analyser -> destination).",
+      "Add attack/decay smoothing on volume, clamp to 0..1, and add disconnect()/reset() to release the source node between utterances.",
+      "Add getEstimatedFeatures(text, elapsedMs) fallback for the Web Speech path (no tappable audio node) that synthesizes a plausible volume envelope from boundary events.",
+      "Verify: feeding a test audio element playing a spoken clip, getFeatures().volume oscillates 0..1 in sync with speech and returns non-empty viseme labels.",
+      "Verify: with no audio playing, getFeatures().volume decays to ~0."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Replace the fake sine-wave mouth with real audio-driven visemes in the particle renderer",
+    "steps": [
+      "DEPENDS ON: 'Build the shared Web Audio graph and wawa-lipsync amplitude/viseme engine' and 'Port the EIDOLON particle face component and neutralize branding'.",
+      "In components/agent-face.tsx add a mouthRef (useRef of {open, viseme}) passed into ParticleFace; remove the hardcoded mouthPulse = sin(...) expression (~line 85).",
+      "In the useFrame loop, read lip-sync features and compute mouthOpen 0..1.",
+      "Map amplitude to the mouth particle range RANGES.mouth (scale Y about MOUTH_Y for open) and widen X per current viseme (viseme_O narrows, viseme_aa widens), replacing the single mouthPulse factor.",
+      "Apply the audio-driven mouth only when emotion is 'speaking' or a speaking flag is set; otherwise keep the emotion's static mouth target.",
+      "Keep updates ref-based (no React state) so the 60fps loop over ~4,700 particles never triggers re-renders.",
+      "Expose an AgentFace prop mouthSource: 'analyser' | 'estimated' | 'off' so the orchestrator can pick the lip-sync path per TTS backend.",
+      "Verify: playing a TTS clip through the analyser visibly opens/closes the mouth particles in time with the audio, not on a fixed sine.",
+      "Verify: when audio stops, the mouth returns to the neutral/emotion target within one morph interval.",
+      "Verify: framerate stays ~60fps in Chrome devtools performance while lip-syncing."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Introduce a face-skin abstraction so EIDOLON and a TalkingHead/RPM skin are swappable",
+    "steps": [
+      "Create lib/face/skin.ts defining interface FaceSkin { setEmotion(e); setSpeaking(on); setMouth(open, viseme?); setViseme(scores); mount(container); dispose() }.",
+      "Wrap the existing R3F renderer as components/skins/eidolon-skin.tsx implementing FaceSkin by driving the mouthRef/emotionRef.",
+      "Create components/face-skin.tsx that selects a skin by id ('eidolon' | 'talkinghead') from settings and renders it, defaulting to eidolon.",
+      "Add a stub components/skins/talkinghead-skin.tsx that lazy-loads TalkingHead.js + a Ready Player Me GLB, mapping Emotion to morph targets and viseme scores to ARKit/Oculus blendshapes; guard behind a flag and mark as stretch (must not block MVP).",
+      "Define a shared viseme vocabulary in lib/face/visemes.ts so wawa-lipsync output maps consistently onto either skin.",
+      "Route all emotion/mouth updates from the orchestrator through the FaceSkin interface rather than the concrete component.",
+      "Verify: switching skin id in settings swaps EIDOLON and the TalkingHead stub without touching orchestrator code.",
+      "Verify: selecting the talkinghead skin without the model present degrades to EIDOLON with a console warning, not a crash."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Implement the conversation-lifecycle emotion state machine",
+    "steps": [
+      "Create lib/face/emotion-machine.ts exporting a pure reducer nextEmotion(phase, signals) mapping lifecycle to Emotion: idle->neutral, listening->alert, transcribing/waiting->thinking, streaming/speaking->speaking, clarifying->confused, error->glitch, success->happy, failure->sad.",
+      "Support model directive overrides: parse a trailing [[face:<emotion>]] token (reuse the fuguFaces extractFaceDirective regex) as the resting emotion after speaking.",
+      "Add keyword-sentiment fallback (error/warning/clarify/success -> sad/alert/confused/happy) when no directive is present (port emotionFromReply).",
+      "Add hold/decay timing so transient states (surprised/happy) settle back to neutral after N ms.",
+      "Expose a useEmotion() hook or store that the orchestrator updates and FaceSkin subscribes to.",
+      "Ensure blink-suppression emotions (happy/sleepy/love/glitch) still animate correctly.",
+      "Verify: a unit test asserts each lifecycle phase yields the documented Emotion.",
+      "Verify: a reply ending in [[face:happy]] leaves the face happy after speaking, with the directive text stripped from spoken output."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Define the pluggable ChatAdapter interface, registry, and SSE helper",
+    "steps": [
+      "Create lib/providers/types.ts defining ChatMessage {role, content}, ChatRequest {model, messages, system, temperature, signal}, and StreamEvent (delta | done | error).",
+      "Define interface ChatAdapter { id; label; listModels(); streamChat(req): AsyncIterable<StreamEvent>; available(env) } — the ONE seam that covers both brain modes (fresh API and agent-bridge).",
+      "Create lib/providers/index.ts as a registry mapping id to factory, plus resolveAdapter(id) and listAvailableAdapters(env) reflecting which server keys / reachable agents are present.",
+      "Add a shared SSE helper lib/providers/sse.ts using eventsource-parser to parse upstream token streams into StreamEvent; add dependency eventsource-parser.",
+      "Standardize error normalization so every adapter throws a typed AdapterError the /api/chat route maps to a status code.",
+      "Document the seam: adding a provider or wiring a new agent = one file implementing ChatAdapter + a registry entry.",
+      "Verify: npm run typecheck passes with a no-op FakeAdapter registered.",
+      "Verify: listAvailableAdapters() returns only adapters whose required env keys / reachable endpoints are present."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Implement the Anthropic Messages streaming adapter (Mode A)",
+    "steps": [
+      "DEPENDS ON: 'Define the pluggable ChatAdapter interface, registry, and SSE helper'.",
+      "Add dependency @anthropic-ai/sdk; run npm install.",
+      "Create lib/providers/anthropic.ts implementing ChatAdapter over the Messages API with stream:true (client.messages.stream).",
+      "Map ChatRequest.system to the top-level system param and messages to content blocks; translate content_block_delta events into StreamEvent deltas.",
+      "Read ANTHROPIC_API_KEY server-side only; available(env) = Boolean(ANTHROPIC_API_KEY).",
+      "listModels() returns a curated set of current claude-* ids with a default overridable via ANTHROPIC_DEFAULT_MODEL.",
+      "Honor req.signal so an aborted client (barge-in) cancels the upstream stream promptly.",
+      "Verify: a scripted streamChat over ANTHROPIC_API_KEY yields multiple delta events then a done event.",
+      "Verify: aborting the AbortSignal stops further deltas; a missing key excludes the adapter from the registry."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Implement the OpenRouter unified adapter (Mode A; also fronts Nous Hermes and other models)",
+    "steps": [
+      "DEPENDS ON: 'Define the pluggable ChatAdapter interface, registry, and SSE helper'.",
+      "Create lib/providers/openrouter.ts against the OpenAI-compatible endpoint https://openrouter.ai/api/v1/chat/completions with stream:true.",
+      "Send OPENROUTER_API_KEY as Bearer plus HTTP-Referer and X-Title headers per OpenRouter etiquette.",
+      "Parse SSE data: chunks via lib/providers/sse.ts, extracting choices[0].delta.content into StreamEvent deltas and handling the [DONE] sentinel.",
+      "Implement listModels() by fetching https://openrouter.ai/api/v1/models (brief cache) and pin known Nous Research Hermes model ids as favorites; default via OPENROUTER_DEFAULT_MODEL.",
+      "Map the system prompt into the messages array as a system role (OpenAI shape).",
+      "Honor req.signal for abort/barge-in.",
+      "Verify: streamChat against a cheap OpenRouter model yields incremental deltas then done.",
+      "Verify: listModels() includes at least one Hermes model; a 401 from a bad key surfaces as a typed AdapterError."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Implement the Groq fast-inference adapter (Mode A)",
+    "steps": [
+      "DEPENDS ON: 'Define the pluggable ChatAdapter interface, registry, and SSE helper'.",
+      "Create lib/providers/groq.ts against Groq's OpenAI-compatible endpoint https://api.groq.com/openai/v1/chat/completions with stream:true.",
+      "Send GROQ_API_KEY as Bearer; parse SSE deltas via lib/providers/sse.ts.",
+      "Implement listModels() returning Groq's current fast models (e.g. llama-3.x family) with a default via GROQ_DEFAULT_MODEL; emphasize very-low-latency inference.",
+      "Map the system prompt into the messages array; honor req.signal.",
+      "available(env) = Boolean(GROQ_API_KEY) (the same key also enables hosted STT via whisper-large-v3-turbo).",
+      "Verify: streamChat yields deltas with a sub-second first token then done.",
+      "Verify: a missing GROQ_API_KEY excludes the adapter; a bad key surfaces as a typed AdapterError."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Implement the agent-bridge adapter (Mode B — reuse a running agent as the brain)",
+    "steps": [
+      "DEPENDS ON: 'Define the pluggable ChatAdapter interface, registry, and SSE helper'.",
+      "Create lib/providers/agent-bridge.ts implementing ChatAdapter for an ALREADY-RUNNING agent, kind selected by AGENT_BRIDGE_KIND:",
+      "  - hermes: port fuguFaces /api/hermes (ensureSession via POST /api/sessions, then POST /api/sessions/{id}/chat with X-Hermes-Session-Key; auth via HERMES_API_BASE_URL/HERMES_API_KEY or AGENT_BRIDGE_URL/KEY).",
+      "  - ollama: POST {url}/api/chat with stream:true (NDJSON lines); models via {url}/api/tags.",
+      "  - openclaw / claude-code / openai-compatible: POST {url}/v1/chat/completions (or the bridge's chat endpoint) parsed as SSE.",
+      "Reuse the agent's own memory/tools/persona: pass a stable session/thread id and do NOT resend full history when the agent is stateful.",
+      "available(env): a reachable endpoint is usable in localhost dev and self-host/VPS; on Vercel only when ALLOW_AGENT_BRIDGE_IN_PROD=1 or AGENT_BRIDGE_URL is a public HTTPS/tunnel (a serverless function cannot reach a private localhost).",
+      "Parse NDJSON/SSE into StreamEvent deltas robustly (message.content / choices[].delta.content / response); honor req.signal.",
+      "Return a clear 'agent offline' AdapterError when the endpoint is unreachable.",
+      "Verify: with a local Ollama running, streamChat yields deltas from a local model.",
+      "Verify: with AGENT_BRIDGE_KIND=hermes against a reachable Hermes api_server, a session is created and chat returns a reply.",
+      "Verify: in production with a private (non-public) AGENT_BRIDGE_URL, the adapter is absent from listAvailableAdapters()."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Build the streaming /api/chat route that selects an adapter and streams tokens",
+    "steps": [
+      "DEPENDS ON: the Anthropic, OpenRouter, Groq, and agent-bridge adapters and the registry.",
+      "Create app/api/chat/route.ts with runtime='nodejs' and a high maxDuration (model I/O wait is not billed CPU on Vercel).",
+      "Accept POST JSON { provider, model, messages, system }; reject bodies approaching the 4.5 MB request cap early.",
+      "Resolve the adapter via resolveAdapter(provider); return 400 with a machine-readable code if unknown or unavailable (missing key / unreachable agent).",
+      "Return a ReadableStream (text/event-stream) pumping adapter StreamEvents as SSE; flush per delta; set Cache-Control: no-cache and X-Accel-Buffering: no to defeat proxy buffering.",
+      "Wire request.signal into ChatRequest.signal so client disconnect/barge-in aborts the upstream call.",
+      "Never echo API keys; keep all provider secrets server-side.",
+      "Emit a terminal done event and, on failure, a safe error event.",
+      "Verify: curl --no-buffer streaming POST returns incrementally flushed SSE deltas, not one buffered blob.",
+      "Verify: aborting the client mid-stream stops upstream token generation.",
+      "Verify: an unknown provider returns 400 and a keyless/unreachable brain returns a clear 'provider unavailable' error."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Add /api/config capability probe so the UI knows which brains/STT/TTS are available",
+    "steps": [
+      "Create app/api/config/route.ts (GET) returning booleans only: which Mode A adapters are available (anthropic/openrouter/groq), whether the Mode B agent-bridge is reachable/permitted, whether hosted STT keys exist (GROQ_API_KEY/OPENAI_API_KEY), and whether hosted TTS (OPENAI_API_KEY) exists.",
+      "Derive availability from listAvailableAdapters(process.env) plus simple key-presence checks; never return key values or partial secrets.",
+      "Include the default model per available provider so the picker can preselect.",
+      "Add a short cache header; this endpoint has no secrets and is cheap.",
+      "Verify: GET /api/config returns { providers:{...}, agentBridge, stt:{...}, tts:{...} } reflecting the current env with no secret material.",
+      "Verify: removing a key flips the corresponding boolean; the response contains no 'sk-' or key-like substrings."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Build the streaming chat client that consumes /api/chat and drives thinking/speaking",
+    "steps": [
+      "DEPENDS ON: 'Build the streaming /api/chat route that selects an adapter and streams tokens'.",
+      "Create lib/chat/client.ts exporting async function* streamChat({provider, model, messages, system, signal}) that POSTs to /api/chat and yields token deltas parsed from the SSE stream (eventsource-parser in the browser).",
+      "Fire lifecycle callbacks: onStart -> emotion 'thinking', onFirstToken -> begin the 'speaking' handoff to TTS, onDone, onError -> 'glitch'.",
+      "Accumulate the assistant text and strip any trailing [[face:x]] directive before sending to TTS (delegate to the emotion machine).",
+      "Expose an AbortController so the UI can cancel (barge-in) mid-stream.",
+      "Buffer tokens into sentence-sized chunks and hand them to the TTS layer incrementally so speech can start before the full reply arrives.",
+      "Verify: calling streamChat renders tokens progressively in the transcript panel.",
+      "Verify: the first sentence is dispatched to TTS before the stream completes; aborting stops token accumulation and any queued TTS."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Add the conversation state store, system prompt, and persona",
+    "steps": [
+      "Create lib/conversation.ts holding turns (user/assistant/system), the current provider/model, and the active persona/system prompt (prefer zero-dep useState + context for the MVP).",
+      "Define lib/persona.ts with a default FACE persona system prompt instructing concise spoken answers and optional [[face:<emotion>]] directives, generalized beyond Hermes.",
+      "Persist turns and settings to localStorage under a versioned key so a refresh restores the session; include a reset action.",
+      "Cap retained history length to keep /api/chat bodies well under the 4.5 MB request cap.",
+      "Expose addUserTurn, appendAssistantDelta, and finalizeAssistantTurn used by the chat client.",
+      "Verify: sending messages accumulates a coherent multi-turn history passed to /api/chat.",
+      "Verify: reloading restores prior turns and the selected provider/model; reset clears history and returns the face to neutral."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Implement microphone capture and push-to-talk recording",
+    "steps": [
+      "Create lib/audio/recorder.ts wrapping getUserMedia({audio:true}) + MediaRecorder, reusing the fuguFaces MIME negotiation (audio/webm;codecs=opus preferred, mp4/ogg/wav fallbacks).",
+      "Expose start(), stop() returning a Blob, and a live MediaStream getter (needed for VAD and any stream-based lip-sync).",
+      "Request the mic only on the first record gesture; surface permission errors as recoverable UI state, not a crash.",
+      "Enforce a max clip length/size guard to stay well under the 4.5 MB hosted-STT request cap; auto-stop long recordings.",
+      "Resume the shared AudioContext on the record gesture (autoplay policy) so downstream lip-sync is unlocked.",
+      "Provide a push-to-talk binding (hold Space / press-and-hold the Talk button) that starts on press and stops on release.",
+      "Verify: hold-to-talk records and yields a non-empty opus blob under the size cap.",
+      "Verify: denying mic permission shows a typed hint and leaves typing available; releasing reliably ends the recording."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Add hands-free voice activity detection (VAD) with Silero/ONNX",
+    "steps": [
+      "Add dependency @ricky0123/vad-web (and its onnxruntime-web peer); run npm install.",
+      "Create lib/audio/vad.ts wrapping MicVAD.new({ onSpeechStart, onSpeechEnd, positiveSpeechThreshold, minSpeechFrames }) on the shared MediaStream/AudioContext.",
+      "On onSpeechStart set lifecycle 'listening' (emotion alert); on onSpeechEnd hand the captured segment to the STT layer.",
+      "Ensure the Silero ONNX model + worklet assets resolve under the COEP headers (self-host under public/ or configure the asset base path).",
+      "Add a barge-in hook: if VAD detects speech while the face is speaking, cancel TTS and the in-flight chat.",
+      "Make VAD toggleable in settings and mutually exclusive with push-to-talk; debounce short noises.",
+      "Verify: hands-free, speaking a sentence auto-starts and auto-ends a turn end-to-end.",
+      "Verify: speaking over the agent's TTS interrupts it (barge-in); background noise below threshold does not start a turn."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Implement the in-browser Whisper worker (transformers.js, WebGPU with WASM fallback)",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Add cross-origin isolation headers so browser Whisper can run' (COOP/COEP).",
+      "Add dependency @huggingface/transformers; run npm install.",
+      "Create lib/stt/whisper-worker.ts as a Web Worker that lazy-imports pipeline('automatic-speech-recognition', modelId) with device:'webgpu' and falls back to device:'wasm' on failure; modelId configurable (default Xenova/whisper-base).",
+      "Post messages for load progress, ready, transcribe (audio Float32Array/blob), and result; decode incoming webm/opus to PCM via the AudioContext before feeding the model.",
+      "Detect WebGPU via navigator.gpu, pick the backend, and report the chosen backend back to the UI.",
+      "Keep the pipeline resident between calls; handle worker errors/OOM by signaling a fallback-to-hosted.",
+      "Verify: the worker loads whisper-base once, reports progress, and transcribes a short clip to correct text offline (airplane mode).",
+      "Verify: on a machine without WebGPU it transparently uses WASM and still returns a transcript; a second transcription reuses the resident pipeline with no re-download."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Add the Whisper model download and caching UX",
+    "steps": [
+      "DEPENDS ON: 'Implement the in-browser Whisper worker'.",
+      "Create components/stt-status.tsx showing model download progress (worker progress events), cached/ready state, and the active backend (WebGPU/WASM).",
+      "Persist that the model is cached (transformers.js uses the browser Cache Storage) and show 'ready, offline-capable' once loaded.",
+      "Offer a 'download model' affordance on first browser-STT use so the ~150 MB download is a deliberate, explained action; show estimated size and a cancel/skip-to-hosted option.",
+      "Surface backend + model in the HUD so users understand $0/private mode is active.",
+      "Verify: first run shows a progress bar to 100% then 'ready'.",
+      "Verify: a reload skips re-download and shows 'cached/ready'; canceling routes STT to the hosted fallback."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Upgrade /api/transcribe into a hosted STT fallback (Groq whisper-large-v3-turbo, OpenAI fallback)",
+    "steps": [
+      "Rewrite app/api/transcribe/route.ts (start from the fuguFaces OpenAI proxy) to accept a multipart audio field named 'audio' and select a provider: Groq whisper-large-v3-turbo when GROQ_API_KEY is set (cheapest/fastest), else OpenAI gpt-4o-transcribe/whisper-1 when OPENAI_API_KEY is set.",
+      "Keep runtime='nodejs'; enforce a byte cap comfortably under the 4.5 MB request limit and reject oversize clips with 413.",
+      "Forward to Groq's OpenAI-compatible https://api.groq.com/openai/v1/audio/transcriptions or OpenAI /v1/audio/transcriptions with model + optional language + prompt (vocab hints).",
+      "Return { text, provider, model, latencyMs }; normalize upstream errors to safe JSON with correct status codes.",
+      "Keep both GROQ_API_KEY and OPENAI_API_KEY server-side; add a language/prompt passthrough from settings.",
+      "Verify: with GROQ_API_KEY set, a short webm/opus clip returns accurate text and provider 'groq'.",
+      "Verify: with only OPENAI_API_KEY set, it falls back to OpenAI; an oversize clip returns 413 with no upstream call."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Implement STT auto-selection (browser-first, hosted fallback)",
+    "steps": [
+      "DEPENDS ON: 'Implement the in-browser Whisper worker' and 'Upgrade /api/transcribe into a hosted STT fallback'.",
+      "Create lib/stt/index.ts exporting transcribe(blob, {mode}) where mode is 'browser' | 'hosted' | 'auto'.",
+      "In 'auto', prefer the browser worker when WebGPU/WASM is usable and the model is cached; on worker error, timeout, or missing model, POST to /api/transcribe (confirm a hosted key exists via /api/config).",
+      "If no hosted key and browser STT is unavailable, return a typed 'no STT available' error the UI can explain.",
+      "Record which engine served the transcript for the HUD; wire this as the single entry point for push-to-talk and VAD.",
+      "Verify: 'auto' uses the browser worker when cached and hosted when it is not.",
+      "Verify: pulling the network still transcribes via the cached browser model; with neither path, the UI shows a clear message and keeps text input working."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Implement Web Speech API TTS with chunking and boundary-driven mouth",
+    "steps": [
+      "Create lib/tts/web-speech.ts wrapping SpeechSynthesis: pick a voice, expose speak(text), cancel(), and lifecycle callbacks (onStart/onEnd/onBoundary).",
+      "Chunk text into <=~200-char / sentence-sized utterances to dodge the ~15s Chrome truncation bug, queueing sequentially.",
+      "NOTE: SpeechSynthesis exposes no tappable audio node, so drive the mouth from onboundary word events + a synthetic envelope (lib/lipsync getEstimatedFeatures) rather than the FFT analyser.",
+      "Set emotion 'speaking' on the first utterance start and return to the resting emotion on the final utterance end.",
+      "Handle voiceschanged to populate available voices; expose them to settings; ensure cancel() fully stops the queue for barge-in.",
+      "Verify: a multi-sentence reply speaks fully without the ~15s cutoff.",
+      "Verify: the mouth animates during speech via the estimated envelope and settles when done; cancel() immediately silences queued utterances."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Add the streaming gpt-4o-mini-tts route for high-quality voice-out",
+    "steps": [
+      "Create app/api/tts/route.ts (runtime='nodejs') accepting POST { text, voice, format } and calling OpenAI /v1/audio/speech with model gpt-4o-mini-tts, streaming the audio bytes back to the client.",
+      "Return a streamed Response with the correct Content-Type (audio/mpeg) and no proxy buffering so playback can start before the full clip arrives.",
+      "Keep OPENAI_API_KEY server-side; validate text length and reject empty/oversized input.",
+      "Prefer a chunk-per-sentence contract so the orchestrator can request TTS incrementally as chat tokens arrive.",
+      "Return a clear error if no key so the client falls back to Web Speech; honor request.signal so barge-in aborts synthesis.",
+      "Verify: POST returns a playable streamed audio response that starts before completion.",
+      "Verify: the returned audio, played through an audio element on the shared AudioContext, is tappable by the wawa-lipsync analyser; a missing key returns a typed error the client handles."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Build the TTS router that routes real audio into the lip-sync analyser and supports barge-in",
+    "steps": [
+      "DEPENDS ON: 'Add the streaming gpt-4o-mini-tts route', 'Build the shared Web Audio graph and wawa-lipsync amplitude/viseme engine', and 'Implement Web Speech API TTS with chunking and boundary-driven mouth'.",
+      "Create lib/tts/index.ts exposing speak(text, {engine}) where engine is 'web-speech' | 'openai' | 'kokoro' and a global stop() for barge-in.",
+      "For 'openai', fetch /api/tts as a stream, feed it into an audio element created on the shared AudioContext, and connect it through lib/lipsync connectMediaElement so the mouth is driven by the REAL FFT analyser (mouthSource 'analyser').",
+      "For 'web-speech', use the estimated-envelope path (mouthSource 'estimated').",
+      "Drive the emotion machine: 'speaking' while audio plays, resting emotion on ended.",
+      "Implement stop(): cancel the Web Speech queue, pause+reset the audio element, abort the /api/tts fetch, and disconnect the analyser source so a new utterance attaches cleanly.",
+      "Queue sentence chunks from the chat client so speech starts on the first sentence.",
+      "Verify: OpenAI TTS produces real FFT-driven lip-sync visibly better than the Web Speech estimate.",
+      "Verify: barge-in silences audio and stops the mouth within a frame; switching engine changes voice + mouthSource with no leftover analyser connections."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Add the all-local Kokoro-82M WebGPU TTS engine (stretch)",
+    "steps": [
+      "DEPENDS ON: 'Build the TTS router' and the lip-sync analyser.",
+      "Add dependency kokoro-js; create lib/tts/kokoro.ts loading Kokoro-82M on WebGPU (WASM fallback) in a worker, exposing speak(text) returning audio playable through an audio element/AudioBuffer on the shared AudioContext.",
+      "Route Kokoro output through lib/lipsync connectMediaElement so it uses the real FFT lip-sync path (mouthSource 'analyser'), same as OpenAI TTS.",
+      "Show a model download/cache UX consistent with the Whisper status component; gate behind a settings toggle; fall back to Web Speech on failure.",
+      "Keep this off the MVP critical path; it must not block the core loop.",
+      "Verify: with Kokoro selected, replies are spoken fully offline and drive FFT lip-sync.",
+      "Verify: a Kokoro load failure degrades to Web Speech without a crash; the model caches and reloads without re-download."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Build the settings panel with brain picker, keys hint, voice, face, and STT mode",
+    "steps": [
+      "DEPENDS ON: 'Add /api/config capability probe' and the provider registry.",
+      "Create components/settings-panel.tsx (drawer) reading /api/config to show only available brains and to disable unavailable ones with an explanation.",
+      "Add a brain picker: a Mode A provider (Anthropic/OpenRouter/Groq) + a model dropdown from the proxied listModels() with the server default preselected; or Mode B agent-bridge (shown when reachable) with its kind/URL fields in dev/self-host.",
+      "Add controls for STT mode (browser | hosted | auto), TTS engine (web-speech | openai | kokoro), face skin (eidolon | talkinghead), and push-to-talk vs VAD hands-free.",
+      "Persist all settings via lib/conversation.ts localStorage; changes take effect without reload.",
+      "Do NOT collect provider API keys in the browser — keys stay server-side; show a hint pointing to env config when a brain is unavailable.",
+      "Verify: only server-available brains are selectable; unavailable ones show why.",
+      "Verify: changing model/voice/skin/STT-mode updates behavior immediately and survives reload; agent-bridge controls are hidden when /api/config reports it unreachable."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Wire the full conversation orchestrator (listen -> transcribe -> chat -> speak -> lip-sync -> emotion)",
+    "steps": [
+      "DEPENDS ON: recorder, VAD, STT auto-selection, chat client, TTS router, emotion machine, and the face-skin.",
+      "Create lib/orchestrator.ts (or a useConversation hook) that owns the lifecycle FSM and sequences: capture (PTT or VAD) -> transcribe(blob, mode) -> streamChat -> chunked speak -> lip-sync -> emotion transitions.",
+      "Rebuild app/page.tsx around the orchestrator + FaceSkin + FaceHud + SettingsPanel instead of the fuguFaces /api/hermes + speechSynthesis path.",
+      "Start TTS on the first streamed sentence (not after full completion) for low latency; keep the transcript panel updating live.",
+      "Drive FaceSkin.setEmotion/setSpeaking/setMouth from orchestrator events; strip [[face:x]] before speaking and apply it as the resting emotion.",
+      "Implement global interrupt (barge-in): a new user utterance or VAD-during-speech aborts the chat AbortController and calls TTS stop().",
+      "Keep heavy work off the React render path (refs/worker messages) to protect the 60fps particle loop.",
+      "Verify: a full spoken turn runs end-to-end: mic -> transcript -> streamed reply -> spoken audio -> lip-synced mouth -> resting emotion.",
+      "Verify: interrupting mid-reply cleanly starts a new turn; the face shows thinking during the stream and speaking synced to audio."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Implement graceful degradation when no server keys are present",
+    "steps": [
+      "DEPENDS ON: '/api/config', STT auto-selection, TTS router, and the orchestrator.",
+      "On load, read /api/config and browser capabilities (navigator.gpu, MediaRecorder, SpeechSynthesis) to compute an available-features matrix.",
+      "With no keys, allow a fully-local experience where possible: browser-Whisper STT + Web Speech TTS + the agent-bridge in dev; if no chat brain is reachable, show a clear 'add a key or wire your running agent' state while keeping the face interactive.",
+      "Auto-select STT 'browser' and TTS 'web-speech' when hosted keys are absent; select hosted only when keys exist.",
+      "Never hard-fail the UI on a missing capability; each missing piece shows an explanatory, actionable message; typing-to-chat works whenever any brain is available.",
+      "Verify: with zero env keys the app boots, the face animates, and browser STT + Web Speech still function for a local/dev brain.",
+      "Verify: removing GROQ/OPENAI keys routes STT to the browser worker and TTS to Web Speech; with no brain at all, the UI explains what to configure instead of throwing."
+    ],
+    "passes": false
+  },
+  {
+    "category": "skill",
+    "description": "Create the skill/agent-face package and SKILL.md thin router",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Initialize claude-faces repo and top-level folder layout'.",
+      "Create the portable skill directory skill/agent-face/ with subfolders references/, scripts/, and assets/.",
+      "Author skill/agent-face/SKILL.md with YAML frontmatter: name: agent-face (MUST NOT contain 'claude' or 'anthropic' — reserved), description, version, license: MIT, and neutral metadata.",
+      "Write the description to state WHAT (gives an AI agent a talking, animated, lip-syncing voice face, deployable on Vercel or self-hosted), WHEN to use it, and trigger phrases ('give my agent a face', 'talk to my agent by voice', 'deploy a face UI', 'lip-sync face', 'put a face on Hermes/openclaw').",
+      "Keep SKILL.md a THIN ROUTER under 500 lines: short Overview, When-to-Use, a numbered operating flow, and links to references/*.md (progressive disclosure).",
+      "Add a Portability section stating the skill uses only harness-agnostic node/bash scripts and works on Claude Code, Hermes, openclaw, trustclaw, nanoclaw.",
+      "Describe the two brain modes (A fresh API, B bring-your-own running agent) and point at references/backends.md.",
+      "Verify: wc -l skill/agent-face/SKILL.md is <= 500.",
+      "Verify: a grep for a frontmatter name containing claude/anthropic returns nothing, and the description contains explicit trigger phrases plus a WHEN clause."
+    ],
+    "passes": false
+  },
+  {
+    "category": "skill",
+    "description": "Package the app template into skill assets with a drift-parity check",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Create the skill/agent-face package and SKILL.md thin router' and a building app (typecheck/build pass).",
+      "Create skill/agent-face/assets/app-template/ as a self-contained copy of the deployable app: app/, components/, lib/, public/, package.json, package-lock.json, tsconfig.json, next.config.mjs, postcss.config.mjs, components.json, vercel.json, next-env.d.ts, Dockerfile, docker-compose.yml, and a template .env.example.",
+      "Add skill/agent-face/assets/app-template/README.md pointing back to the skill references.",
+      "Set the single-source-of-truth policy: the repo-root app is canonical and the template is a synced snapshot; add skill/agent-face/scripts/sync-template.mjs that regenerates the template from the repo root and fails on divergence (--check).",
+      "Add a .gitignore inside the template so scaffolded copies ignore node_modules/.next/.env*.local; exclude node_modules/.next/.vercel from the packaged template.",
+      "Verify: node skill/agent-face/scripts/sync-template.mjs --check reports parity.",
+      "Verify: copy assets/app-template to a temp dir, run npm install && npm run build, and confirm it builds standalone."
+    ],
+    "passes": false
+  },
+  {
+    "category": "skill",
+    "description": "Write the portable scaffold script",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Package the app template into skill assets with a drift-parity check'.",
+      "Create skill/agent-face/scripts/scaffold.mjs as a Node ESM script (no Claude-specific tools, no external deps) that copies assets/app-template/ into a target directory passed as the first arg (default ./agent-face-app).",
+      "Refuse to overwrite a non-empty target unless --force is passed; recursively copy while skipping node_modules/.next.",
+      "After copy, print next steps: cp .env.example .env.local, npm install, then how to run the dev script.",
+      "Support a --install flag (npm install in the target), a --help flag, and resolve the template path relative to the script so it works when the skill is extracted standalone.",
+      "Make it cross-platform (node:fs/node:path, avoid bash-only cp semantics).",
+      "Verify: node skill/agent-face/scripts/scaffold.mjs /tmp/af-test creates the app files in the target.",
+      "Verify: re-running without --force on a populated target exits non-zero with a clear message; cd /tmp/af-test && npm run build succeeds after install."
+    ],
+    "passes": false
+  },
+  {
+    "category": "skill",
+    "description": "Write the dev-with-kill script that kills any previous server before starting",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Package the app template into skill assets with a drift-parity check'.",
+      "Create skill/agent-face/scripts/dev.mjs (Node ESM) that FIRST kills any previous dev server before starting a new one — this kill step is a HARD REQUIREMENT (matches the owner's standing 'always kill previous process' rule).",
+      "Implement the kill portably: find any process listening on the dev port (default 3000, overridable via --port) using lsof -ti tcp:PORT on macOS/Linux, and terminate stray next dev processes; SIGTERM then SIGKILL if still alive.",
+      "After the port is confirmed free, spawn npm run dev in the app dir (current dir if it has package.json, else assets/app-template).",
+      "Once the server is listening, open the browser (macOS open / Linux xdg-open / Windows start), skipped in headless/CI or with --no-open.",
+      "Stream child stdout/stderr and forward Ctrl-C to stop the child cleanly.",
+      "Verify: run the script twice in a row; only one process listens on the port (lsof -ti tcp:3000 | wc -l returns 1).",
+      "Verify: the browser opens to the running app (or is skipped with --no-open) and the face renders."
+    ],
+    "passes": false
+  },
+  {
+    "category": "skill",
+    "description": "Write the check-env script",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Define the provider env contract and .env.example with graceful degradation'.",
+      "Create skill/agent-face/scripts/check-env.mjs (Node ESM) that reads the environment (and optionally a .env.local in the target app) and reports which brains are configured.",
+      "Report per capability: Mode A chat providers (ANTHROPIC/OPENROUTER/GROQ), Mode B agent-bridge reachability, STT (GROQ/OPENAI), TTS (OPENAI); print a clear check/cross table.",
+      "NEVER print secret values — only presence/absence (mask everything).",
+      "Print a resolved summary: which brain would be selected by the documented priority, and whether voice input will work.",
+      "Exit 0 if at least one chat path is usable, non-zero with guidance otherwise; support --json and --help.",
+      "Verify: with no keys set, the script prints all crosses, a 'no brain configured' hint, and exits non-zero.",
+      "Verify: with ANTHROPIC_API_KEY set, it prints Anthropic available, names it as the selected brain, and exits 0 without leaking the value."
+    ],
+    "passes": false
+  },
+  {
+    "category": "skill",
+    "description": "Write the deploy script with vercel and self-host targets",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Add self-host artifacts (Dockerfile + compose)' and the app vercel.json.",
+      "Create skill/agent-face/scripts/deploy.mjs (Node ESM) with --target vercel|self-host (default vercel), --prod/--preview, and --help.",
+      "Preflight (both targets): verify required app files exist (package.json, app/api/chat/route.ts, app/api/transcribe/route.ts, vercel.json) before doing anything.",
+      "vercel target: confirm the vercel CLI is installed (vercel --version; else print npm i -g vercel and exit non-zero); run vercel link (idempotent); warn (do not hard-fail) if no provider env is present; npm install; npm run typecheck; npm run build; vercel deploy --prod; print the URL + an HTTPS-mic reminder.",
+      "self-host target: run npm run build (or docker build) and print the runnable docker compose up (or next start) command plus how to set AGENT_BRIDGE_URL to the agent's private URL.",
+      "Verify: with vercel absent and --target vercel, the script exits non-zero with the install hint and no partial deploy.",
+      "Verify: --target self-host builds and prints a runnable docker compose / next start command; a missing app file fails preflight fast before any network call."
+    ],
+    "passes": false
+  },
+  {
+    "category": "skill",
+    "description": "Wire the operating flow into SKILL.md (attach-to-host-agent, localhost-or-deploy, target pick)",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Write the dev-with-kill script', 'Write the deploy script with vercel and self-host targets', and 'Write the check-env script'.",
+      "In SKILL.md add an explicit operating sequence: (1) run check-env; (2) offer Mode B — if the host agent (Hermes/openclaw/Claude Code/Ollama) exposes a reachable endpoint, offer to wire the agent-bridge to it so the face reuses that agent as its brain, else fall back to a Mode A key; (3) ASK verbatim 'Run on localhost to try it first, or deploy?'; (4) if deploy, ASK 'Vercel (hosted) or self-host on your VPS?'.",
+      "Document the localhost branch: run node scripts/dev.mjs (kills any prior server first), open the browser, let the user talk to the face.",
+      "Document the deploy branch: node scripts/deploy.mjs --target <vercel|self-host> after confirming env with check-env.",
+      "Make clear the agent MUST wait for and act on each answer rather than assuming a default.",
+      "Reference each script by relative path and one-line purpose so any harness can invoke them with plain node; add an after-deploy verification snippet (open URL, press talk, confirm transcript + spoken reply + face morph).",
+      "Verify: SKILL.md contains the exact question strings and all branches with correct script paths.",
+      "Verify: SKILL.md remains under 500 lines after the additions."
+    ],
+    "passes": false
+  },
+  {
+    "category": "skill",
+    "description": "Author the skill triggering evaluations",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Create the skill/agent-face package and SKILL.md thin router' and 'Wire the operating flow into SKILL.md'.",
+      "Create skill/agent-face/references/evaluations.md following Anthropic skill best practices with at least 3 evaluation scenarios (realistic prompt, expected flow, pass/fail criterion).",
+      "Add a 'Should trigger' list: 'give my agent a face', 'I want to talk to my agent and see it lip-sync', 'deploy a voice face UI to Vercel', 'put a face on my Hermes/openclaw agent'.",
+      "Add a 'Should NOT trigger' list: 'generate a headshot photo', 'build a face-recognition model', 'add face-detection to my camera app', 'write a cron job' — cases that mention 'face' but are unrelated.",
+      "Ensure the SKILL.md description's trigger phrases align with the Should-trigger cases (tune wording if a case would be missed).",
+      "Document how to run the evaluations manually against a harness and record pass/fail.",
+      "Verify: evaluations.md contains >= 3 scenarios plus both a Should-trigger and Should-NOT-trigger section.",
+      "Verify: each Should-trigger phrase is covered by a trigger phrase or keyword in SKILL.md's description."
+    ],
+    "passes": false
+  },
+  {
+    "category": "skill",
+    "description": "Verify cross-harness portability and document the harness matrix",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Write the portable scaffold script', 'Write the dev-with-kill script', 'Write the check-env script', and 'Write the deploy script with vercel and self-host targets'.",
+      "Audit all scripts to confirm they use only Node/bash built-ins and no Claude-specific tools, MCP calls, or harness APIs.",
+      "Run a grep over skill/agent-face/scripts for anthropic|claude|mcp|allowed-tools|tool_use and confirm no harness-coupled references remain.",
+      "Confirm every script runs under a plain runtime: node skill/agent-face/scripts/<name>.mjs --help for scaffold/dev/check-env/deploy.",
+      "Write skill/agent-face/references/portability.md with a harness matrix (Claude Code, Hermes, openclaw, trustclaw, nanoclaw) and how each invokes the skill (SKILL.md discovery + running the node scripts).",
+      "Confirm SKILL.md frontmatter fields are the portable/open subset (name, description, version, license); any harness-specific keys live under metadata.",
+      "Verify: all four --help invocations succeed under node with no missing-dependency errors.",
+      "Verify: the portability grep returns zero harness-coupled matches in scripts."
+    ],
+    "passes": false
+  },
+  {
+    "category": "docs",
+    "description": "Write references/architecture.md and references/backends.md",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Create the skill/agent-face package and SKILL.md thin router' and 'Define the provider env contract and .env.example with graceful degradation'.",
+      "Write skill/agent-face/references/architecture.md: the runtime flow (browser MediaRecorder -> STT browser/hosted -> /api/chat brain -> TTS + face morph), the deploy boundary (Vercel vs self-host), and the security model (server-side keys only).",
+      "Include a mermaid sequence diagram of the voice loop.",
+      "Document the repo layout (root Next.js app, app/api/* thin proxies, skill/ package, prd.json).",
+      "Write skill/agent-face/references/backends.md: Mode A (Anthropic/OpenRouter/Groq) + Mode B (agent-bridge kinds hermes/openclaw/claude-code/ollama/openai-compatible), their env vars, the selection priority, reachability rules, and graceful degradation.",
+      "Add 'How to wire your own agent' and 'How to add a provider' subsections (the single place the /api/chat route dispatches).",
+      "Verify: every env var named in backends.md matches .env.example exactly (diff the key names).",
+      "Verify: the architecture mermaid block renders (fenced mermaid) and contains no Hermes-only references."
+    ],
+    "passes": false
+  },
+  {
+    "category": "docs",
+    "description": "Write references/face.md and references/voice.md",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Port the EIDOLON particle face component and neutralize branding'.",
+      "Write skill/agent-face/references/face.md: the 12 emotions, the [[face:<emotion>]] directive syntax the model can emit, how UI state maps to emotions, and how the particle geometry/morph works (reference lib/face-points.ts COUNTS and buildTargets).",
+      "Document how to customize colors/emotions by editing EMOTION_META and the per-emotion target builders; list the 1-0/Q/W keyboard shortcuts.",
+      "Write skill/agent-face/references/voice.md: STT (browser Whisper via transformers.js + hosted Groq/OpenAI fallback), TTS (Web Speech vs streamed gpt-4o-mini-tts vs Kokoro), the two lip-sync paths (real FFT analyser vs estimated envelope) and why Web Speech cannot be FFT-tapped, and mic/HTTPS requirements.",
+      "Verify: face.md lists exactly the 12 emotions present in lib/face-points.ts.",
+      "Verify: voice.md's env var names (OPENAI_API_KEY, GROQ_API_KEY, OPENAI_TRANSCRIBE_*) match .env.example."
+    ],
+    "passes": false
+  },
+  {
+    "category": "docs",
+    "description": "Write references/deploy.md and references/troubleshooting.md",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Write the deploy script with vercel and self-host targets' and 'Add self-host artifacts (Dockerfile + compose)'.",
+      "Write skill/agent-face/references/deploy.md: the localhost-first flow, both deploy targets (Vercel button + vercel CLI, and self-host Docker on a VPS), how to set the env vars, and Mode B reachability (private network vs an HTTPS tunnel from Vercel).",
+      "Write skill/agent-face/references/troubleshooting.md covering at least six categories: browser cannot record (HTTPS/MediaRecorder), transcription fails (keys/size/model), chat brain fails (which key / provider auth / rate limits / agent offline), face does not change emotion (invalid directive ignored), dev server port in use (dev.mjs kill), and cross-origin not isolated (browser Whisper) — each with a concrete check. Add a 'nothing configured' entry explaining the degradation messages.",
+      "Add a portability entry: running the scripts under a non-Claude harness (plain node scripts/*.mjs).",
+      "Verify: troubleshooting.md includes the six failure categories, each with a concrete check.",
+      "Verify: deploy.md commands cover both targets and reference no removed Hermes-only variable."
+    ],
+    "passes": false
+  },
+  {
+    "category": "docs",
+    "description": "Write the human-facing README",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Wire the full conversation orchestrator' (page renders) and 'Rebrand public assets, favicon, and layout metadata'.",
+      "Rewrite root README.md outcomes-first: open with what you get (talk to your agent, hear a voice reply, watch an animated lip-syncing face) and a hero screenshot placeholder from public/screenshots/hero.png.",
+      "Add a Quick Start: git clone, npm install, cp .env.example .env.local, add a provider key OR point it at your running agent, npm run dev, open localhost, press talk.",
+      "Add a 'Two brains' section: Mode A (Anthropic/OpenRouter/Groq) vs Mode B (bring your own running agent: Hermes/openclaw/Claude Code/Ollama), with the north-star line 'install the skill on an agent and it gets a face'.",
+      "Add a 'Deploy' section (button added by the dedicated task) plus a self-host note; link to skill/agent-face/references/deploy.md.",
+      "Add an 'Install the skill' section explaining the portable skill/agent-face folder works on Claude Code, Hermes, openclaw, trustclaw, nanoclaw, and how to invoke the scaffold/dev/check-env/deploy scripts.",
+      "Add a brains table (Mode A providers + Mode B agent-bridge kinds), the optional env vars, and a screenshots section (public/screenshots/talking.png).",
+      "Verify: README renders with no broken relative links.",
+      "Verify: a grep for 'quick start', 'deploy', 'skill', and 'brain' confirms all major sections are present."
+    ],
+    "passes": false
+  },
+  {
+    "category": "docs",
+    "description": "Add the Deploy with Vercel button and env prompt wiring",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Write the human-facing README' and 'Define the provider env contract and .env.example with graceful degradation'.",
+      "Construct the Deploy button URL: https://vercel.com/new/clone?repository-url=<REPO_URL>&env=ANTHROPIC_API_KEY,OPENROUTER_API_KEY,GROQ_API_KEY,OPENAI_API_KEY&envDescription=...&envLink=<REPO_URL>/blob/main/skill/agent-face/references/backends.md&project-name=claude-faces&repository-name=claude-faces.",
+      "Add the markdown button [Deploy with Vercel](clone-url) using https://vercel.com/button into the README Deploy section.",
+      "Set envDescription to make clear all four keys are optional and the app degrades gracefully; point envLink at backends.md.",
+      "Confirm the env list contains exactly the four Mode A keys (Mode B is configured post-deploy since it needs a reachable agent).",
+      "Document that the repository-url must be updated to the final public GitHub URL once the repo is pushed.",
+      "Verify: the button URL parses and its env query param equals ANTHROPIC_API_KEY,OPENROUTER_API_KEY,GROQ_API_KEY,OPENAI_API_KEY.",
+      "Verify: clicking the rendered button opens the Vercel clone page listing all four env prompts (manual check)."
+    ],
+    "passes": false
+  },
+  {
+    "category": "docs",
+    "description": "Write CONTRIBUTING.md and developer setup docs",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Write the human-facing README'.",
+      "Write CONTRIBUTING.md: local setup (Node 22, npm install), the scripts, code style (typecheck/lint before PR), and the single-source-of-truth rule that app changes must be synced into skill/agent-face/assets/app-template via sync-template.mjs.",
+      "Document the branch/PR workflow and that CI must pass (typecheck, build, skill-lint, template parity, portability, test:skill).",
+      "Add docs/development.md describing the repo layout and the boundary between scaffolding and app-internals work.",
+      "Note how to run and test the four skill scripts locally under a plain node runtime.",
+      "Link CONTRIBUTING.md from the README.",
+      "Verify: CONTRIBUTING.md references the sync-template parity requirement and the CI checks by name.",
+      "Verify: relative links in CONTRIBUTING.md and docs/development.md resolve."
+    ],
+    "passes": false
+  },
+  {
+    "category": "infra",
+    "description": "Set up the app test/eval harness (Vitest unit + Playwright browser)",
+    "steps": [
+      "Add devDeps vitest, @vitest/ui, jsdom, @playwright/test; run npm install and npx playwright install chromium.",
+      "Add scripts to package.json: test (vitest run), test:e2e (playwright test), and test:watch.",
+      "Create vitest.config.ts (jsdom env) and playwright.config.ts (baseURL http://localhost:3000, webServer npm run dev) that respect the COEP/COOP headers.",
+      "Add fixtures under tests/fixtures/: a short spoken webm/wav clip for STT smoke tests and a sample TTS audio clip for lip-sync tests.",
+      "Add a mock ChatAdapter and a fake SSE server helper so streaming tests do not hit real providers.",
+      "Grant Playwright a fake mic (--use-fake-device-for-media-stream / permissions context) for deterministic audio tests.",
+      "Verify: npm test runs an empty suite green; npm run test:e2e launches the dev server and loads the app.",
+      "Verify: the harness can grant mic permission and inject a fake audio stream."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Eval: STT accuracy smoke test (browser + hosted)",
+    "steps": [
+      "DEPENDS ON: 'Set up the app test/eval harness', 'Implement the in-browser Whisper worker', and 'Upgrade /api/transcribe into a hosted STT fallback'.",
+      "Create tests/stt.smoke.test.ts feeding a known fixture clip through lib/stt transcribe(blob, {mode:'browser'}) and asserting the transcript matches expected text within an edit-distance tolerance.",
+      "Add a hosted-path case (mode:'hosted') mocking /api/transcribe to return a fixed transcript to validate wiring without spending API credits.",
+      "Assert 'auto' falls back from browser to hosted when the worker throws; assert the served-engine label is reported correctly.",
+      "Keep the real-model browser assertion tolerant (whisper-base is imperfect) but require key content words present.",
+      "Verify: the browser-Whisper transcript contains the expected keywords; the auto fallback path is exercised.",
+      "Verify: the test runs without real network calls for the hosted case."
+    ],
+    "passes": false
+  },
+  {
+    "category": "backend",
+    "description": "Eval: streaming chat works end-to-end through /api/chat",
+    "steps": [
+      "DEPENDS ON: 'Set up the app test/eval harness', the provider registry, and '/api/chat'.",
+      "Create tests/chat.stream.test.ts registering the mock ChatAdapter that emits several deltas then done, and asserting /api/chat returns incrementally flushed SSE events in order.",
+      "Assert the route returns 400 for an unknown provider and a typed 'unavailable' error for a keyless/unreachable brain.",
+      "Assert request abort propagates to adapter cancellation (spy on the AbortSignal).",
+      "Add a client test that lib/chat/client.ts streamChat yields progressive tokens and strips a trailing [[face:x]] directive; assert the first-sentence handoff to TTS fires before completion.",
+      "Verify: SSE deltas arrive incrementally, not as one buffered blob; abort cancels upstream and stops token accumulation.",
+      "Verify: unknown/keyless providers return the documented error codes."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Eval: lip-sync fires on real audio",
+    "steps": [
+      "DEPENDS ON: 'Build the shared Web Audio graph and wawa-lipsync amplitude/viseme engine' and 'Build the TTS router'.",
+      "Create tests/lipsync.test.ts (Playwright) that plays the fixture TTS audio through an audio element on the shared AudioContext connected to lib/lipsync, sampling getFeatures().volume over time.",
+      "Assert volume rises above a threshold during speech and decays to ~0 during silence (envelope non-flat).",
+      "Assert the mouth particle displacement (exposed via a test hook on the EidolonSkin) correlates with volume, i.e. the mouth is not on a fixed sine when real audio plays.",
+      "Add a Web-Speech-path assertion that the estimated envelope drives non-zero mouth motion via onboundary events.",
+      "Guard for headless WebGPU/WebAudio availability and fall back to WASM/analyser as needed.",
+      "Verify: analyser volume is non-flat and time-aligned with the fixture audio; mouth displacement tracks volume.",
+      "Verify: silence produces near-zero mouth motion."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Eval: emotion transitions across the conversation lifecycle",
+    "steps": [
+      "DEPENDS ON: 'Implement the conversation-lifecycle emotion state machine' and 'Wire the full conversation orchestrator'.",
+      "Create tests/emotion.test.ts unit-testing nextEmotion() for every lifecycle phase to expected Emotion mapping.",
+      "Assert a [[face:happy]] directive overrides the resting emotion and the directive text is stripped from spoken output.",
+      "Assert the keyword-sentiment fallback (error/warning/clarify/success) picks sad/alert/confused/happy when no directive is present.",
+      "Add a Playwright flow test asserting the HUD state readout transitions idle->listening->thinking->speaking->neutral during a mocked turn; assert transient emotions decay to neutral.",
+      "Verify: all phase-to-emotion mappings pass; directive override and text stripping behave correctly.",
+      "Verify: the HUD reflects the expected sequence during a mocked turn."
+    ],
+    "passes": false
+  },
+  {
+    "category": "frontend",
+    "description": "Eval: no-keys graceful degradation path",
+    "steps": [
+      "DEPENDS ON: 'Implement graceful degradation when no server keys are present', '/api/config', and the STT/TTS routers.",
+      "Create tests/degradation.test.ts (Playwright) running the app with /api/config mocked to report zero keys and no reachable agent.",
+      "Assert the app still boots, the particle face animates, and no uncaught errors occur.",
+      "Assert STT auto-selects the browser worker and TTS auto-selects Web Speech.",
+      "Assert that with no brain the UI shows the actionable 'configure a provider / wire your agent' message and typing input remains present; enabling a mock brain restores the send flow without reload.",
+      "Verify: zero-key boot has no console errors and an interactive face; STT/TTS fall back to fully-local engines.",
+      "Verify: the missing-brain state is explanatory and recoverable."
+    ],
+    "passes": false
+  },
+  {
+    "category": "infra",
+    "description": "Add the skill script smoke tests runner",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Verify cross-harness portability and document the harness matrix'.",
+      "Create skill/agent-face/scripts/test/smoke.mjs (Node ESM, no test framework) that exercises each script's safe paths.",
+      "Test scaffold: into a temp dir, assert key files exist and re-scaffold without --force fails.",
+      "Test check-env: no keys (non-zero + all crosses), fake ANTHROPIC_API_KEY (exit 0 + Anthropic selected), assert no secret value is echoed.",
+      "Test dev.mjs kill logic in isolation: use a throwaway server on the port and assert a second invocation would terminate the prior listener (no real next dev needed).",
+      "Test deploy.mjs preflight: a temp dir missing app files fails fast; with vercel absent on PATH assert the install-hint path.",
+      "Add an npm script test:skill at repo root that runs the smoke runner; clean up all temp dirs.",
+      "Verify: npm run test:skill exits 0 with all assertions passing and temp dirs removed."
+    ],
+    "passes": false
+  },
+  {
+    "category": "infra",
+    "description": "Add GitHub Actions CI",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Wire the full conversation orchestrator' (buildable app), 'Add the skill script smoke tests runner', and 'Package the app template into skill assets with a drift-parity check'.",
+      "Create .github/workflows/ci.yml triggered on push and pull_request.",
+      "Add a Node 22 job (actions/setup-node) that runs npm ci, npm run typecheck, and npm run build.",
+      "Add a skill-lint step that asserts SKILL.md frontmatter name has no 'claude'/'anthropic' and the description is non-empty (grep-based, fail on violation).",
+      "Add a template-parity step running node skill/agent-face/scripts/sync-template.mjs --check.",
+      "Add a portability step running the harness-coupling grep over skill/agent-face/scripts (fail on any match).",
+      "Add an npm run test:skill step and a step validating prd.json parses as a JSON array.",
+      "Verify: the workflow passes on a clean checkout.",
+      "Verify: introducing a claude-named SKILL.md name or an out-of-sync template makes CI fail as designed (manual check)."
+    ],
+    "passes": false
+  },
+  {
+    "category": "infra",
+    "description": "Verify the Deploy-with-Vercel clone end-to-end",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Add the Deploy with Vercel button and env prompt wiring', the app vercel.json, and working /api/chat + /api/transcribe.",
+      "Push the repo to a public GitHub URL and update the Deploy button repository-url and envLink to the real URL.",
+      "Click the Deploy with Vercel button, confirm the four env prompts appear (all optional), and complete a deploy with one provider key + OPENAI_API_KEY set.",
+      "Open the resulting HTTPS deployment URL and confirm the face renders over HTTPS.",
+      "Run the end-to-end check: press talk, grant mic, say a test phrase, stop, confirm a transcript appears, the provider replies, browser speech plays, and the face morphs.",
+      "Deploy a second time with NO keys set and confirm graceful degradation.",
+      "Record the working deployment URL in the README.",
+      "Verify: the button-driven deploy builds and serves the app without manual config beyond env prompts.",
+      "Verify: the no-keys deploy loads and degrades gracefully rather than erroring."
+    ],
+    "passes": false
+  },
+  {
+    "category": "infra",
+    "description": "Add self-host artifacts (Dockerfile + compose) for hosting next to the agent",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Wire the full conversation orchestrator' (buildable app) and the app/api/* routes.",
+      "Create a multi-stage Dockerfile (install -> next build -> next start on PORT) and set Next output: 'standalone' for a slim runtime image.",
+      "Create docker-compose.yml running the app plus an AGENT_BRIDGE_URL env pointing at the agent's private network address, with all env vars passed via compose/.env.",
+      "Add a self-host section (in references/deploy.md) describing running on the agent's own VPS so Mode B reaches the agent over the private network with no tunnel.",
+      "Verify: docker compose up serves the app on the configured port.",
+      "Verify: with an agent reachable on the same network, Mode B (agent-bridge) connects over its private URL without a tunnel."
+    ],
+    "passes": false
+  },
+  {
+    "category": "infra",
+    "description": "Finalize the deliverable prd.json at repo root",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON all prior tasks (this file is the project deliverable).",
+      "Ensure root prd.json is a bare JSON array of task objects, each with exactly the keys category, description, steps, passes.",
+      "Ensure category values are within {backend, frontend, docs, skill, infra} and passes is false for every task until built.",
+      "Ensure every task's steps end with one or more Verify: lines and dependencies are expressed as prose (DEPENDS ON / PREREQUISITE).",
+      "Order the array so a developer can execute top-to-bottom with dependencies satisfied.",
+      "Prefix only truly critical tasks with the URGENT marker in their description.",
+      "As tasks complete, flip their passes flag to true to track progress.",
+      "Verify: node parses prd.json as an array and every element has exactly the four required keys with a valid category.",
+      "Verify: no task has an invalid category and every task has at least one Verify: step."
+    ],
+    "passes": false
+  }
+]

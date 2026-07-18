@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# production / self-host
+build/
+
+# env — never commit secrets
+.env
+.env*.local
+
+# vercel
+.vercel/
+
+# testing
+coverage/
+playwright-report/
+test-results/
+
+# ML model cache (browser Whisper / Kokoro downloads)
+public/models/
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
