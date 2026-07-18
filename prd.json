@@ -164,7 +164,7 @@
       "Verify: a unit test asserts each lifecycle phase yields the documented Emotion.",
       "Verify: a reply ending in [[face:happy]] leaves the face happy after speaking, with the directive text stripped from spoken output."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

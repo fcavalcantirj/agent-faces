@@ -226,3 +226,30 @@ headlessly verified; a human can additionally confirm in a browser that mounting
 renders the particle face, and that skinId='talkinghead' (no model) visibly falls back to EIDOLON with the
 documented console warning and no crash. Full TalkingHead avatar rendering lands only if the stretch skin is
 later bundled with a Ready Player Me GLB.
+
+2026-07-18: [frontend] Implement the conversation-lifecycle emotion state machine — DONE.
+Added lib/face/emotion-machine.ts — the single source of truth for "what should the face feel
+now?" Pure reducer nextEmotion(phase, signals) maps the LifecyclePhase union to an Emotion exactly
+per spec: idle->neutral (or the supplied resting emotion), listening->alert, transcribing/waiting->
+thinking, streaming/speaking->speaking, clarifying->confused, error->glitch, success->happy,
+failure->sad; an unknown phase rests instead of crashing. parseFaceDirective() strips ALL
+[[face:<emotion>]] / [[emotion:<emotion>]] tokens (case-insensitive, whitespace-tolerant) from a
+reply so they're never spoken, validates the word against the 12-emotion EMOTIONS list (a
+hallucinated [[face:banana]] strips but yields null), and the LAST valid directive wins (trailing =
+resting-after-speaking). emotionFromReply() is the ported keyword-sentiment fallback (error/failed->
+sad, warning->alert, clarify/unclear->confused, success/done->happy, else neutral). restingEmotionForReply()
+composes them: an explicit directive always overrides sentiment, and returns the stripped spoken text.
+Transient reactions (happy/surprised) decay back to the resting emotion after TRANSIENT_HOLD_MS
+(2200ms); BLINK_SUPPRESSED_EMOTIONS (happy/sleepy/love/glitch) mirrors the renderer's noBlink set in
+components/agent-face.tsx so the machine stays consistent with how those eyes animate. createEmotionStore()
+is a framework-free observable store (getState/getResting/subscribe/setPhase/setEmotion/setResting/
+applyReply) with an injectable timer seam for the transient decay; lib/face/use-emotion.ts wraps it in
+a useEmotion() React hook over a module-level singleton store via useSyncExternalStore, exposing
+emotion/resting + stable setPhase/setEmotion/applyReply callbacks for the orchestrator and FaceSkin host.
+TDD: wrote lib/face/emotion-machine.test.ts FIRST (RED) then implemented (GREEN). Verify (all headless,
+all pass): `npm test` 71/71 green incl. 29 new specs — every lifecycle phase yields its documented
+Emotion; a reply ending in [[face:happy]] parses to resting=happy with the directive stripped from the
+spoken text, and a store flow speaking->idle settles the face onto happy; directive overrides the
+"failed"/"error" sentiment keyword; transient happy decays to the resting emotion after the hold window
+(fake timers); blink-suppressed set matches the renderer. `npm run typecheck` clean; `npm run build`
+compiles and prerenders / and /_not-found. Flipped this task's passes -> true.
