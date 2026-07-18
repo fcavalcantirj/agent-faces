@@ -125,3 +125,29 @@ UAT (headless_verifiable:false — needs a browser + WebGPU): open the app in Ch
 in devtools that self.crossOriginIsolated === true on the app origin, that navigator.gpu resolves an
 adapter with no COEP error, and that the ~4,700-particle face still renders/animates with the new
 headers applied (no cross-origin resource blocked).
+
+2026-07-18: [frontend] Build the shared Web Audio graph and wawa-lipsync amplitude/viseme
+engine — DONE. Installed wawa-lipsync (0.0.2) and set up the test runner (vitest + jsdom,
+vitest.config.ts, `test`/`test:watch` scripts) — first task to need it. lib/audio/context.ts
+exports a lazily-created singleton AudioContext (getAudioContext), a DI setter (setAudioContext,
+used by tests/embeds), and resumeAudio() which must fire from a user gesture (resumes a suspended
+context under the autoplay policy). lib/lipsync.ts wraps wawa-lipsync in a LipsyncEngine class
+(createLipsync factory): fftSize/historySize/attack/decay + optional audioContext. wawa-lipsync's
+constructor spins up its OWN private AudioContext, so the wrapper closes that throwaway and
+re-points wawa's internal analyser/dataArray/sampleRate/binWidth onto our single SHARED context —
+that's the only way to make its AnalyserNode tap exactly the audible graph. connectMediaElement(el)
+wires source -> analyser -> destination (audible TTS clips); connectStream(stream) wires
+source -> analyser ONLY (mic/VAD, no speaker route, avoids feedback). processFrame() (call per rAF)
+runs wawa's processAudio then applies attack(0.5)/decay(0.15) smoothing on volume, clamped 0..1.
+getFeatures() returns {volume, viseme, visemeScores} — scores reuse wawa's own
+computeVisemeScores + adjustScoresForConsistency (guarded for empty history -> sil). disconnect()
+releases the source node + zeroes volume between utterances; reset() also clears wawa state.
+getEstimatedFeatures(text, elapsedMs) (delegates to exported estimateFeatures) is the Web Speech
+fallback (no tappable node): deterministic amplitude envelope from estimated duration (~180 wpm)
+with fade-in/out + syllable(4.5Hz)/word(1.6Hz) modulation, and a viseme chosen from the character
+under the playhead; returns silence before start / after end / for empty text. Verify (all headless,
+all pass): `npm test` — 8/8 vitest specs green, incl. (a) feeding a mock analyser a rise-then-fall
+speech spectrum, getFeatures().volume oscillates within 0..1, peaks >0.3 above its silent start,
+and emits valid non-silence viseme labels; (b) after loud priming then a zeroed spectrum, volume
+decays to <0.05 (~0); plus disconnect/stream/estimate specs. `npm run typecheck` clean; `npm run
+build` compiles and prerenders / and /_not-found. Flipped this task's passes -> true.

@@ -114,7 +114,7 @@
       "Verify: feeding a test audio element playing a spoken clip, getFeatures().volume oscillates 0..1 in sync with speech and returns non-empty viseme labels.",
       "Verify: with no audio playing, getFeatures().volume decays to ~0."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
