@@ -1664,3 +1664,9 @@ public/screenshots PNGs) and both inline images resolve; the CONTRIBUTING.md men
 backticked prose, not a link. Verify 2 (grep major sections): quick start=1, deploy=8,
 skill=13, brain=10 — all present. Docs-only task, no code touched (no test/sync-template
 needed). Flipped this task's passes -> true.
+
+[2026-07-18] Deploy with Vercel button + env prompt wiring
+- Verified README Deploy button URL (line 11): host=vercel.com/new/clone, env param equals exactly ANTHROPIC_API_KEY,OPENROUTER_API_KEY,GROQ_API_KEY,OPENAI_API_KEY (the four Mode A keys), envDescription states all optional + graceful degradation, envLink -> backends.md, project-name/repository-name = claude-faces, image = vercel.com/button.
+- Added a Deploy-section note: only the four Mode A keys are prompted (Mode B is wired post-deploy), and the repository-url must point at the final public GitHub repo once pushed (update on fork/rename).
+- Headless check: node URL parse asserts env query equals the four keys exactly (passes).
+UAT: a human must click the rendered button and confirm the Vercel clone page lists all four env prompts (needs a browser + Vercel session).

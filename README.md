@@ -56,7 +56,7 @@ See [`skill/agent-face/references/backends.md`](skill/agent-face/references/back
 
 The skill **asks** whether you want to run on localhost first, then where to deploy:
 
-- **Vercel** (hosted) — click the button above, or run `node skill/agent-face/scripts/deploy.mjs --target vercel`. All four env keys are optional and prompted at clone time.
+- **Vercel** (hosted) — click the button above, or run `node skill/agent-face/scripts/deploy.mjs --target vercel`. All four env keys are optional and prompted at clone time. Only the four **Mode A** keys are prompted; Mode B (bring-your-own agent) is wired *after* deploy, since it needs a reachable agent. The button's `repository-url` must point at the final public GitHub repo once pushed (currently `github.com/fcavalcantirj/claude-faces`) — update it if you fork or rename.
 - **Self-host** — `node skill/agent-face/scripts/deploy.mjs --target self-host` builds a Docker image you run on your own VPS *next to your agent*, so Mode B reaches it over the private network with no tunnel.
 
 Details in [`skill/agent-face/references/deploy.md`](skill/agent-face/references/deploy.md).

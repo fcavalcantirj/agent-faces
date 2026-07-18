@@ -751,7 +751,7 @@
       "Verify: the button URL parses and its env query param equals ANTHROPIC_API_KEY,OPENROUTER_API_KEY,GROQ_API_KEY,OPENAI_API_KEY.",
       "Verify: clicking the rendered button opens the Vercel clone page listing all four env prompts (manual check)."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {
