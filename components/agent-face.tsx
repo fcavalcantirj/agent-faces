@@ -7,7 +7,6 @@ import * as THREE from 'three'
 import {
   buildTargets,
   EMOTION_META,
-  EYE_X,
   EYE_Y,
   MOUTH_Y,
   RANGES,

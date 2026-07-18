@@ -38,7 +38,6 @@ function fakeModel(bytes = 'RIFFwav') {
   return { model, calls }
 }
 
-const flush = () => new Promise((r) => setTimeout(r, 0))
 
 // --- KokoroEngine ----------------------------------------------------------
 

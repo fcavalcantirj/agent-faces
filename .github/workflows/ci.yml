@@ -30,6 +30,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Added 2026-07-18. This had NEVER run: eslint.config.mjs did not exist, so
+      # ESLint 9 exited 2 on every invocation and the script silently did nothing.
+      - name: Lint
+        run: npm run lint
+
       # NOTE: the unit suite is not listed in the task's steps, but a CI that
       # builds without running 429 tests would be a rubber stamp. Included
       # deliberately.

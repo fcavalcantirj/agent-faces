@@ -59,7 +59,7 @@ function makeScriptedAdapter(): ChatAdapter {
     async listModels(): Promise<ModelInfo[]> {
       return [{ id: 'fake-model', isDefault: true }]
     },
-    async *streamChat(req: ChatRequest): AsyncIterable<StreamEvent> {
+    async *streamChat(_req: ChatRequest): AsyncIterable<StreamEvent> {
       yield { type: 'delta', text: 'Hel' }
       yield { type: 'delta', text: 'lo' }
       yield { type: 'done', reason: 'stop' }
