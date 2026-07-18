@@ -55,9 +55,24 @@ export interface UseCapabilitiesOptions {
 export function useCapabilities(options: UseCapabilitiesOptions = {}): UseCapabilities {
   const store = options.store ?? getConversationStore()
 
-  // Browser sniffing is synchronous + SSR-safe (all-false on the server); do it
-  // once. `detectBrowserCapabilities()` reads `globalThis`.
-  const browser = useMemo<BrowserCapabilities>(() => detectBrowserCapabilities(), [])
+  // Browser sniffing reads `globalThis`, which is EMPTY on the server but fully
+  // populated in the browser. Computing it during render therefore made the
+  // server HTML and the first client render disagree — React threw "Hydration
+  // failed because the server rendered text didn't match the client" and the
+  // control button visibly flashed "VOICE UNAVAILABLE — TYPE BELOW" before
+  // correcting itself.
+  //
+  // So: start from the SSR-equivalent snapshot (an empty scope — all false, the
+  // exact thing the server rendered) and resolve the real capabilities in an
+  // effect, which runs only AFTER hydration has committed. First client render
+  // now matches the server byte for byte.
+  const [browser, setBrowser] = useState<BrowserCapabilities>(() =>
+    detectBrowserCapabilities({}),
+  )
+
+  useEffect(() => {
+    setBrowser(detectBrowserCapabilities())
+  }, [])
 
   const [config, setConfig] = useState<AppConfig>(options.config ?? EMPTY_CONFIG)
   const [loading, setLoading] = useState<boolean>(!options.config)

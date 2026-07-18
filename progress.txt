@@ -1895,3 +1895,51 @@ timers, which is the correct place for it; the e2e now asserts HAPPY PERSISTS pa
 Verify (all RUN, exit codes captured directly): typecheck EXIT=0; npm test EXIT=0 429/429
 across 37 files; full `npx playwright test` EXIT=0 with 10 passed + 1 skipped (up from 7+1).
 Flipped passes -> true. hv:true so no UAT line is owed — every step was genuinely verified.
+
+2026-07-18: [frontend] Eval: no-keys graceful degradation path — DONE.
+tests/e2e/degradation.spec.ts (4 tests, real chromium) runs the app with /api/config mocked via
+page.route to report ZERO keys and no agent bridge. Asserts: the canvas renders with non-zero
+dimensions (the face is never gated on keys); NO uncaught pageerrors and no unexpected console
+errors; the banner explains the failure in ACTIONABLE words, naming ANTHROPIC_API_KEY and
+AGENT_BRIDGE_URL specifically rather than a generic "unavailable"; the text input and SEND
+button remain present so zero-key is a degraded path, not a dead end; the render loop is
+genuinely live (polls window.__agentFaceMouth under ?e2e=1 rather than trusting a static
+canvas); and with a brain configured the banner is gone and a mocked turn round-trips to
+"I am awake." in the transcript.
+THIS EVAL IMMEDIATELY EARNED ITS KEEP — it caught the hydration bug as an UNCAUGHT EXCEPTION,
+not merely a console warning, which is worse than how I originally filed it. Rather than
+allowlist my own known bug to make my own test pass (which would have been exactly the
+rubber-stamp move), I fixed it — see the next entry — and then TIGHTENED the allowance list
+to only dasbrow's createRoot issue (#60). When that lands the list should be emptied entirely.
+Verify (all RUN, $? captured directly): typecheck 0; npm test 0 429/429; build 0; full
+playwright 14 passed + 1 skipped. Flipped passes -> true.
+UAT: confirm in a real browser with NO keys set at all that the app is genuinely pleasant and
+not just non-crashing — face animates smoothly, the message reads as helpful rather than an
+error dump, and the local-only STT/TTS paths (browser Whisper + Web Speech) actually work end
+to end on your hardware. A headless assertion can prove the message is PRESENT and the paths
+are SELECTED; only a human can judge whether the zero-key experience feels usable.
+
+2026-07-18: [frontend] Fix the SSR/client hydration mismatch on the voice control button — DONE.
+ROOT CAUSE: lib/use-capabilities.ts computed `const browser = useMemo(() =>
+detectBrowserCapabilities(), [])` DURING RENDER. That function reads globalThis, which is empty
+on the server (all capabilities false) but fully populated in the browser (mic/wasm/etc true).
+So the server rendered "VOICE UNAVAILABLE — TYPE BELOW" and the very first client render
+produced "HOLD TO TALK (OR SPACE)" — React threw "Hydration failed because the server rendered
+text didn't match the client" as an UNCAUGHT exception, and users saw a flash of the wrong,
+discouraging label before it corrected.
+FIX: seed state with the SSR-EQUIVALENT snapshot — detectBrowserCapabilities({}) with an empty
+scope, i.e. byte-for-byte what the server rendered — and resolve the real capabilities in a
+useEffect, which runs only AFTER hydration commits. First client render now matches the server
+exactly; the real matrix lands one tick later. detectBrowserCapabilities already accepted an
+injectable scope, so no signature change was needed. Deliberately did NOT use
+suppressHydrationWarning, which hides the mismatch instead of fixing it.
+RED came from the degradation eval's zero-pageerror gate failing on this exact error; GREEN is
+that same gate passing with `grep -ciE "hydration failed|did not match"` over the full run
+returning 0. Root app file changed so sync-template.mjs re-run (77 files, 1 updated).
+Verify (all RUN, $? captured directly): typecheck 0; npm test 0 429/429 (no regression); build
+0; full playwright 14 passed + 1 skipped; zero hydration errors in the run output.
+Flipped passes -> true. hv:true and every step was genuinely verified, so no UAT owed.
+NOTE: filed a new task — "Let a newly-configured brain recover without a full page reload" —
+for the spec-vs-implementation gap found while writing the degradation eval (config is fetched
+once on mount; the banner says to reload). Not silently coded around; it is a product decision
+for Felipe.
