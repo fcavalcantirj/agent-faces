@@ -407,7 +407,7 @@
       "Verify: 'auto' uses the browser worker when cached and hosted when it is not.",
       "Verify: pulling the network still transcribes via the cached browser model; with neither path, the UI shows a clear message and keeps text input working."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {

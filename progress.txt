@@ -839,3 +839,47 @@ GROQ_API_KEY set, POST a short webm/opus clip to /api/transcribe and confirm acc
 provider 'groq' + model whisper-large-v3-turbo; with only OPENAI_API_KEY set, confirm it falls back
 to OpenAI (whisper-1/gpt-4o-transcribe); confirm a deliberately bad key surfaces a 401 unauthorized
 and a language/prompt passthrough biases the transcript.
+
+=== 2026-07-18 — Implement STT auto-selection (browser-first, hosted fallback) [frontend] ===
+Built lib/stt/index.ts — the SINGLE speech-to-text entry point that push-to-talk and VAD both
+call: transcribe(blob, { mode }, deps) where mode is 'browser' | 'hosted' | 'auto' (default
+'auto'). Routing core is PURE over an injected SttDeps seam ({ browser?: BrowserSttEngine, hosted?:
+HostedSttEngine }) so it is fully headlessly unit-testable with fakes — no Worker, no fetch, no
+WebGPU. AUTO flow: prefer the in-browser Whisper worker ONLY when it isSupported() AND
+isModelCached() (an uncached model would trigger a ~150 MB surprise download, so route hosted
+instead); wrap the browser attempt in withTimeout (default DEFAULT_BROWSER_TIMEOUT_MS=30_000) and,
+on ANY browser failure (worker error / OOM / timeout / unsupported / uncached), POST the clip to the
+hosted /api/transcribe fallback after confirming a hosted key exists via hosted.isAvailable()
+(/api/config). Only when NEITHER path can serve does it throw a typed SttError('no_stt_available')
+the UI turns into a clear "download the model or add GROQ_API_KEY / OPENAI_API_KEY — you can still
+type" message. FORCED modes never silently cross over: mode 'browser' throws
+SttError('browser_unavailable') when WebGPU/WASM is unusable (does NOT fall back to hosted); mode
+'hosted' throws SttError('hosted_unavailable') when no hosted key is set. Every SttResult records
+which engine served it (engine 'browser'|'hosted', plus backend / provider / model / latencyMs) so
+the HUD can show $0/private vs hosted. Also shipped the real default clients wired by
+defaultSttDeps() (cached once per session): createHostedStt() — GET /api/config for isAvailable(),
+multipart POST /api/transcribe (audio + language + prompt, filenameFor() MIME->ext), typed
+SttError('transcription_failed') carrying the route's safe error message on !ok, never throws on a
+config-probe failure; createBrowserStt() — keeps ONE dedicated Whisper worker RESIDENT across calls
+(loaded once via the ready handshake, never re-downloaded), speaks the WhisperRequest/WhisperResponse
+protocol from ./whisper-worker, correlates results by request id, and honors opts.signal for
+barge-in (abort). isSupported() gates on Worker + WebAssembly presence; isModelCached() delegates to
+probeModelCached (Cache Storage). TDD: wrote lib/stt/index.test.ts FIRST (RED — module missing),
+then implemented (GREEN). Verify (all headless, all pass): `npx vitest run lib/stt/index.test.ts`
+20/20 green — auto prefers cached browser (hosted untouched); auto routes hosted when model not
+cached (browser.transcribe never called); auto falls back to hosted on worker error AND on timeout;
+auto uses the cached browser model even when hosted is unavailable (offline case); auto uses hosted
+when the browser is unsupported; auto throws no_stt_available when neither can serve; forced-browser
+ignores hosted and throws browser_unavailable when unsupported; forced-hosted ignores the browser
+and throws hosted_unavailable; a forced hosted failure propagates a typed error; createHostedStt
+isAvailable() reflects /api/config stt booleans (false + never-throws on probe error) and transcribe
+POSTs the multipart form + returns the parsed result + throws with the route's message on 401.
+`npm run typecheck` clean; `npm test` 269/269 green (24 files); `npm run build` compiles (Turbopack
+bundles the resident `new Worker(new URL('./whisper-worker.ts', import.meta.url))`). No app-template
+exists yet (later task), so no sync-template run needed. Flipped this task's passes -> true.
+UAT (headless_verifiable:false — needs a real browser + mic + network toggle): (1) with the Whisper
+model cached, record a clip in-app and confirm mode 'auto' transcribes it LOCALLY (HUD shows browser
++ WebGPU/WASM) with the network throttled to offline; (2) with the model NOT cached, confirm 'auto'
+routes to hosted (HUD shows the hosted provider); (3) with NEITHER a cached model nor a hosted key,
+confirm the UI shows the "download the model or add a key" message and text-to-chat still works;
+(4) confirm a barge-in mid-transcription aborts the browser worker cleanly.
