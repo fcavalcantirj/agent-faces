@@ -469,7 +469,7 @@
       "Verify: with Kokoro selected, replies are spoken fully offline and drive FFT lip-sync.",
       "Verify: a Kokoro load failure degrades to Web Speech without a crash; the model caches and reloads without re-download."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {

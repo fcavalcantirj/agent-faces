@@ -1025,3 +1025,52 @@ a frame; (3) switch engine web-speech↔openai and confirm the voice + mouthSour
 leftover analyser connections (no double-audio, no stuck mouth); (4) with no OPENAI_API_KEY, confirm
 the openai path degrades to Web Speech automatically. Full analyser-driven behavior is validated once
 the orchestrator task wires the router to the chat client + emotion store in a real browser.
+
+2026-07-18: [frontend] Add the all-local Kokoro-82M WebGPU TTS engine (stretch) — DONE.
+Added the offline voice-out path so a reply can be spoken with zero hosted keys AND still
+drive the REAL FFT lip-sync (mouthSource 'analyser'), same as OpenAI TTS. Installed
+kokoro-js (1.2.1; pulls @huggingface/transformers, already vendored for browser Whisper).
+Mirrored the whisper worker/engine/status split into three focused files:
+• lib/tts/kokoro-engine.ts — the headlessly-testable CORE. KokoroEngine.load() builds
+  Kokoro-82M via kokoro-js KokoroTTS.from_pretrained with a WebGPU-first / WASM-fallback
+  strategy (dtypeForBackend: webgpu→fp32, wasm→q8 so a GPU-less machine gets an ~86 MB
+  download, not ~326 MB), keeps the model RESIDENT (a 2nd synthesize never re-loads), and
+  synthesize(text,{voice,speed}) returns a WAV Blob via RawAudio.toBlob() playable through
+  an <audio> element on the shared AudioContext. Failures surface as a typed KokoroError with
+  fallbackToWebSpeech=true (empty text = a bad-request, fallback=false). Every heavy primitive
+  (the kokoro-js model, WebGPU detect) is injected; the default createModel lazily
+  `await import("kokoro-js")` so the module stays light and tests need no model/GPU/network.
+• lib/tts/kokoro-worker.ts — a THIN message shim (KokoroRequest load|synthesize ↔ KokoroResponse
+  progress|ready|audio|error) with createKokoroWorkerBridge(engine,post) so the heavy load +
+  synthesis run OFF the main thread (protects the 60fps particle loop); the dedicated-worker
+  wiring is guarded by importScripts so importing it in tests / on the main thread is a no-op.
+• lib/tts/kokoro.ts — the main-thread facade. KokoroController spawns the worker (injectable),
+  correlates each synthesize request→audio response by id, and exposes getSynthesizer():
+  ClipSynthesizer (text,signal)=>Promise<Blob> + toRouterDeps() — exactly the shape the existing
+  TtsRouter already accepts as deps.kokoroSynthesize, so the router plays the returned WAV through
+  connectMediaElement on the analyser path with no router changes. It owns a small download/cache
+  STATE MACHINE (unloaded→downloading→ready|error|canceled) via kokoroStatusReducer (a per-synthesis
+  error keeps 'ready'; only an id-less LOAD error trips 'error'), probeKokoroCached (transformers
+  Cache Storage), and honors the AbortSignal (barge-in) by rejecting + dropping the pending request —
+  the router's gen guard swallows that so barge-in never spuriously falls back. A load/synth failure
+  rejects the synthesizer so the router falls back to Web Speech (fail-soft, no crash).
+• components/kokoro-status.tsx — presentational, mirrors components/stt-status.tsx: a deliberate
+  "DOWNLOAD (~86 MB)" affordance, a live progress bar, SKIP TO WEB SPEECH, and a
+  "ready, offline-capable · WEBGPU/WASM · CACHED" readout over the controller via useSyncExternalStore.
+  Gating behind the settings toggle + wiring into the shared router lands in the settings/orchestrator
+  tasks; this task ships the pieces (the router already exposes the kokoroSynthesize seam).
+TDD: wrote lib/tts/kokoro.test.ts (28 specs) alongside the impl. Verify (all headless, all pass):
+`npm test` 329/329 green incl. the 28 new kokoro specs — WebGPU→WASM fallback + backend/dtype
+selection, resident model (createModel once across 2 syntheses), WAV blob out with default voice
+af_heart + explicit voice/speed passthrough, empty-text bad-request (no load) + generate() OOM →
+fallback KokoroError, the worker bridge's progress/ready/audio/id-tagged-error/unknown-request paths,
+the status reducer (aggregate + ready + per-synth-error-keeps-ready + load-error trips error),
+probeKokoroCached hit/miss, and the controller over a fake worker (id→blob correlation, synth-error
+reject, abort drops pending + a late audio for the dropped id is ignored, progress/ready fold into
+state, init reflects cached, cancel terminates+rejects, load idempotent). `npm run typecheck` clean;
+`npm run build` compiles and prerenders all routes. Flipped this task's passes -> true.
+UAT (headless_verifiable:false — needs a browser + WebGPU/WASM + the ~86 MB model download): with the
+Kokoro engine selected in settings, confirm a reply is spoken FULLY OFFLINE (airplane mode after the
+first download) and that its audio drives the FFT analyser lip-sync (visibly better than the Web Speech
+estimate); confirm a Kokoro load failure degrades to Web Speech without a crash; confirm the model caches
+(Cache Storage) so a reload shows "cached/ready" and does not re-download.
