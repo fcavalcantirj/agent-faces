@@ -283,7 +283,7 @@
       "Verify: GET /api/config returns { providers:{...}, agentBridge, stt:{...}, tts:{...} } reflecting the current env with no secret material.",
       "Verify: removing a key flips the corresponding boolean; the response contains no 'sk-' or key-like substrings."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

@@ -496,3 +496,34 @@ keyless anthropic (unavailable), invalid JSON, and empty messages all return the
 and pointing AGENT_BRIDGE_KIND=ollama at a local mock NDJSON server that emits one chunk every 250ms,
 `curl --no-buffer` received the SSE deltas 250ms APART (05:18:24.864 → .112 → .363 → .614) then the
 terminal done — proving incremental, unbuffered flushing end-to-end. Flipped this task's passes -> true.
+
+2026-07-18: [backend] Add /api/config capability probe so the UI knows which brains/STT/TTS
+are available — DONE. Added app/api/config/route.ts (GET, runtime='nodejs', dynamic force-dynamic
+so it reads per-deployment process.env at request time). Returns a SECRET-FREE capability surface:
+{ providers, agentBridge, stt, tts, defaultProvider }. Availability is derived from the REAL adapter
+registry (listAdapters()/adapter.available(env)) — the same seam /api/chat uses — split so Mode A
+brains (anthropic/openrouter/groq) land under `providers` (each { available, label, mode, defaultModel? })
+and the Mode B agent-bridge is surfaced separately under `agentBridge` ({ available, defaultModel? }).
+Only booleans + non-secret model ids/labels ever leave the server; no key value or partial secret is
+returned. For each AVAILABLE adapter the default model to preselect is resolved via the adapter's own
+listModels(env) (picks isDefault, else first) so an env override like ANTHROPIC_DEFAULT_MODEL flows
+through — wrapped in a withTimeout(1500ms) guard so a slow/hung provider catalog fetch (OpenRouter's
+live /models) degrades to no defaultModel instead of blocking the probe, and the timer is unref'd so it
+never keeps a serverless invocation alive. STT/TTS are plain key-presence checks (not chat brains, not
+in the registry): stt.groq=Boolean(GROQ_API_KEY) (dual-use: brain + hosted Whisper), stt.openai/
+tts.openai=Boolean(OPENAI_API_KEY). defaultProvider=selectDefaultAdapter(env)?.id ?? null preselects the
+highest-priority available brain. Short cache header (Cache-Control: public, max-age=30,
+stale-while-revalidate=300) since the endpoint is cheap and secret-free. Kept consistent with
+docs/env-contract.md + .env.example. TDD: wrote app/api/config/route.test.ts FIRST (RED — module not
+found) then implemented (GREEN). Verify (all headless, all pass): `npm test` 145/145 green incl. 7 new
+config specs — full shape with everything OFF at zero keys (providers all available:false, agentBridge
+off, stt/tts all false, defaultProvider null, cache header + JSON content-type present); ANTHROPIC_API_KEY
+flips anthropic on with defaultModel claude-opus-4-8 and defaultProvider anthropic; ANTHROPIC_DEFAULT_MODEL
+override reflected; GROQ_API_KEY unlocks BOTH the groq brain (defaultModel llama-3.3-70b-versatile) AND
+stt.groq (one key, two capabilities); OPENAI_API_KEY unlocks stt.openai+tts.openai but no chat brain;
+removing a key flips the boolean back off; and a body containing fake sk-/gsk- secrets asserts NO 'sk-'/
+'gsk-'/'super-secret' substrings leak. `npm run typecheck` clean; `npm run build` compiles and now emits
+ƒ /api/config (dynamic). Additionally verified over REAL HTTP with `npx next start` and GROQ_API_KEY set
+to a fake secret: GET /api/config returned groq available with its default model, stt.groq:true,
+defaultProvider "groq", the Cache-Control header present, and ZERO 'gsk-' occurrences in the body.
+Flipped this task's passes -> true.
