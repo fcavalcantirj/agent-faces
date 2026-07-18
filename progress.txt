@@ -1379,3 +1379,44 @@ skill/agent-face/scripts/dev.mjs` in a scaffolded app twice in a row and confirm
 tcp:3000 | wc -l` returns 1 (the new server; the prior one was killed) and that the browser
 opens to http://localhost:3000 with the particle face rendering; run with --no-open and confirm
 the browser is NOT opened but the server still starts.
+
+2026-07-18: [skill] Write the check-env script — DONE. Added
+skill/agent-face/scripts/check-env.mjs (Node ESM, zero external deps,
+harness-agnostic — does NOT import the TypeScript app modules so it runs when the
+skill is extracted standalone). It reads the process environment plus, optionally,
+a .env.local / .env in a target app dir (positional arg, default '.') honoring
+Next.js precedence (shell env > .env.local > .env, via a tiny built-in dotenv
+parser) and prints a ✓/✗ capability table: Mode A chat brains
+(ANTHROPIC/OPENROUTER/GROQ with their resolved default model + any *_DEFAULT_MODEL
+override), the Mode B agent-bridge (kind + configured/permitted, replicating the
+adapter's PURE availability logic — valid AGENT_BRIDGE_KIND|HERMES alias + URL,
+gated by SELF_HOST / Vercel-private-URL / ALLOW_AGENT_BRIDGE_IN_PROD / public-HTTPS
+via isPublicHttpsUrl), STT (browser Whisper always-on + hosted GROQ/OPENAI), and
+TTS (browser Web Speech always-on + OPENAI). NEVER prints a secret — only
+presence/absence; only non-secret model ids/labels are shown. The resolved summary
+names the brain the documented priority (anthropic > openrouter > groq >
+agent-bridge) would select, states voice input always works (browser Whisper
+fallback) and whether hosted STT/TTS upgrades exist. Exits 0 when >=1 chat brain is
+usable, else 1 with an actionable "No chat brain configured" hint pointing at
+.env.example / docs/env-contract.md. Flags: --json (secret-free machine-readable
+report), --probe (optional live GET of the agent-bridge URL with a 2.5s
+AbortController timeout to confirm real reachability; unreachable => not usable),
+--help; unknown option exits 2. Pure functions (parseDotenv, loadEnv, computeReport,
+selectBrain, isUsable, isPublicHttpsUrl, parseArgs) are exported for headless unit
+tests, and the CLI only runs when invoked directly (import.meta.url guard). Kept
+consistent with docs/env-contract.md + .env.example. NOT part of the app-template
+(skill scripts live outside assets/app-template/), so no sync-template step. TDD:
+wrote skill/agent-face/scripts/check-env.test.ts FIRST (RED) then implemented
+(GREEN). Verify (all headless, all pass): `npm test` 399/399 green incl. 16 new
+check-env specs — empty env yields no brain / not usable / browser voice on;
+priority anthropic>openrouter>groq; default-model + override surfacing; GROQ key
+unlocks brain AND hosted STT; OPENAI key unlocks STT/TTS but no brain; agent-bridge
+usable on localhost and selected when no Mode A key; a private URL hidden on Vercel
+unless ALLOW_AGENT_BRIDGE_IN_PROD / public HTTPS; HERMES_API_BASE_URL aliases the
+hermes kind; public-vs-private URL classification; dotenv parsing; parseArgs. Plus
+CLI spawns proving the two task Verify cases end-to-end with a CLEAN env: (1) no
+keys -> all crosses, "No chat brain configured" hint, exit 1; (2) ANTHROPIC_API_KEY
+set to a sentinel secret -> "Selected brain: Anthropic (claude-opus-4-8)", exit 0,
+and the sentinel value (and "sk-ant-") appear NOWHERE in stdout; --json is
+secret-free. `npm run typecheck` clean; `npm run build` compiles and prerenders /
+and /_not-found (+ dynamic API routes). Flipped this task's passes -> true.

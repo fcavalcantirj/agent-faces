@@ -611,7 +611,7 @@
       "Verify: with no keys set, the script prints all crosses, a 'no brain configured' hint, and exits non-zero.",
       "Verify: with ANTHROPIC_API_KEY set, it prints Anthropic available, names it as the selected brain, and exits 0 without leaking the value."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
