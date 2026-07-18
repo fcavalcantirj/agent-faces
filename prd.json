@@ -502,7 +502,7 @@
       "Verify: a full spoken turn runs end-to-end: mic -> transcript -> streamed reply -> spoken audio -> lip-synced mouth -> resting emotion.",
       "Verify: interrupting mid-reply cleanly starts a new turn; the face shows thinking during the stream and speaking synced to audio."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {

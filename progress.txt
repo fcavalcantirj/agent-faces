@@ -1125,3 +1125,41 @@ headlessly verified. A human can additionally confirm in a browser that opening 
 server-available brains selectable (others greyed with a reason), that changing model/voice/skin/STT-mode
 updates behavior immediately and survives a reload, and that the agent-bridge row is absent when /api/config
 reports it unreachable.
+
+---
+2026-07-18 — Wire the full conversation orchestrator (listen -> transcribe -> chat -> speak -> lip-sync -> emotion) [frontend]
+Built lib/orchestrator.ts: a framework-free, fully-injectable ConversationOrchestrator that owns the spoken-turn
+FSM and sequences every subsystem behind one seam — submitAudio(blob)/submitText(text) → transcribe(blob, mode)
+→ runChat (streamed) → chunked TtsRouter.speak → real-audio lip-sync → emotion transitions. It: keeps the face
+THINKING during the token stream and only hands off to SPEAKING on the TTS onStart (so the mouth is synced to
+audio, never the raw stream); starts TTS on the FIRST streamed sentence for low latency while the transcript
+panel updates token-by-token; strips [[face:x]] before speaking and applies it as the resting emotion via the
+EmotionStore; drives FaceSkin.setEmotion/setSpeaking/setMouth (mirroring emotion-store changes into the skin and
+bridging the TTS mouthRef → skin.setMouth via a single rAF copy loop that only runs while speaking); implements
+global barge-in (interrupt()/notifyUserSpeaking() abort the chat AbortController AND call tts.stop(), finalizing
+the partial reply so history stays coherent); and surfaces STT/no-brain failures as an error phase (glitch) with
+a user-facing message rather than crashing.
+Added lib/orchestrator.test.ts (5 tests, headless, all fakes — no mic/network/audio/WebGL): a full turn runs
+transcribe→chat→speak→lip-sync→rest with the correct THINKING-then-SPEAKING phase order and the happy resting
+directive applied; a mid-reply barge-in aborts chat + TTS, finalizes the partial, and cleanly runs a fresh turn;
+an STT failure lands in the error phase; submitText runs without STT and errors clearly when no brain is picked;
+the TTS mouthRef is bridged into the FaceSkin while speaking.
+Added lib/use-orchestrator.ts: the React hook that constructs the REAL rig once (shared mouthRef, TtsRouter with
+callbacks forwarding to the orchestrator's speech hooks, STT transcribe, runChat, MicRecorder + push-to-talk, and
+hands-free VAD with barge-in), exposes status/attachSkin/pttHandlers/toggleHandsFree/sendText/interrupt, wires
+Space for PTT and Esc for barge-in, and tells the VAD when the face is speaking.
+Rebuilt app/page.tsx around FaceSkinHost + FaceHud + SettingsPanel + the orchestrator (replacing the demo
+speechSynthesis/estimateFeatures placeholder): mounts the selected skin and hands it to the orchestrator, a Talk
+button that press-and-holds (PTT) or toggles hands-free VAD by input mode, a text box, a STOP/interrupt button,
+a live token-by-token transcript panel, an error toast, and a phase-driven HUD subtitle + STT readout.
+Verify: `npm run typecheck` clean; `npm run build` compiles (route / static); full suite 356/356 pass incl. the
+5 new orchestrator tests. (Project `npm run lint` is broken repo-wide — ESLint v9 wants eslint.config.js, a
+pre-existing issue unrelated to this task and not one of its Verify steps.) No app-template exists yet, so no
+sync-template run was needed.
+UAT (headless_verifiable:false): a human must confirm in a real browser with a mic + a live brain key that a full
+spoken turn runs end-to-end — mic → transcript → streamed reply → audible spoken audio → lip-synced mouth on the
+particle face → resting emotion — and that interrupting mid-reply (speaking over it in hands-free, or a new
+utterance / Esc / STOP) cleanly aborts and starts a new turn, with the face showing THINKING during the stream
+and SPEAKING synced to the audio. These need real audio playback, WebGPU/WASM, a microphone, and a live/paid
+provider key, none of which are available headlessly; the FSM logic itself is fully covered by the headless tests
+above.

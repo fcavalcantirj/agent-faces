@@ -1,67 +1,91 @@
 'use client'
 
-// TEMPORARY demo mount for the ported EIDOLON particle face + HUD.
-// Lets a human confirm the face renders, all 12 emotions cycle via the
-// 1-0/Q/W keys or the on-screen controls, and the mouth is now driven by real
-// lip-sync features (not the old fake sine). Replaced by the full conversation
-// orchestrator UI in the "Wire the full conversation orchestrator" task.
-import dynamic from 'next/dynamic'
-import { useEffect, useRef, useState } from 'react'
+// The Claude Faces home screen — the full conversation UI wired around the
+// orchestrator. It mounts the selected FaceSkin, hands it to the orchestrator to
+// drive, and surfaces the controls for a spoken turn:
+//
+//   • Talk — press-and-hold (push-to-talk) OR tap to toggle hands-free VAD,
+//     depending on the selected input mode. Space also works for PTT.
+//   • A text box to type a turn when you'd rather not speak.
+//   • Interrupt (Esc) — global barge-in that aborts the reply and stops speech.
+//   • A live transcript panel that updates token-by-token as the brain streams.
+//   • The 12-emotion HUD (manual override) + the settings drawer.
+//
+// The face shows THINKING while the brain streams and SPEAKING synced to the
+// real audio; a resting `[[face:x]]` directive (or reply sentiment) settles it
+// when the turn ends. All the heavy pipeline wiring lives in useOrchestrator so
+// this file stays a thin shell; the FSM itself is headlessly tested.
+
+import { useState } from 'react'
 import { Settings } from 'lucide-react'
+import { FaceSkinHost } from '@/components/face-skin'
 import { FaceHud } from '@/components/face-hud'
 import { SettingsPanel } from '@/components/settings-panel'
-import type { MouthState } from '@/components/agent-face'
-import type { Emotion } from '@/lib/face-points'
-import { estimateFeatures } from '@/lib/lipsync'
+import { useConversation } from '@/lib/use-conversation'
+import { useEmotion } from '@/lib/face/use-emotion'
+import { useOrchestrator } from '@/lib/use-orchestrator'
 
-// The R3F renderer touches browser-only APIs (canvas 2D sprite, WebGL), so
-// load it client-only to avoid running document.createElement during SSR.
-const AgentFace = dynamic(
-  () => import('@/components/agent-face').then((m) => m.AgentFace),
-  { ssr: false },
-)
+/** Short, human label for the active lifecycle phase (HUD readout). */
+const PHASE_LABEL: Record<string, string> = {
+  idle: 'READY',
+  listening: 'LISTENING',
+  transcribing: 'TRANSCRIBING',
+  waiting: 'THINKING',
+  streaming: 'THINKING',
+  speaking: 'SPEAKING',
+  error: 'ERROR',
+}
 
 export default function Home() {
-  const [emotion, setEmotion] = useState<Emotion>('neutral')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  // Ref-based mouth state so the 60fps particle loop never re-renders React.
-  const mouthRef = useRef<MouthState>({ open: 0, viseme: 'viseme_sil' })
+  const [draft, setDraft] = useState('')
 
-  // DEMO driver: while the "speaking" emotion is active, feed the real
-  // estimated lip-sync envelope (the Web Speech fallback path in lib/lipsync)
-  // into the mouth ref on each frame so a human can watch audio-shaped visemes
-  // open/close/widen the mouth. The orchestrator task swaps this for real
-  // analyser/estimated features straight from the TTS layer.
-  useEffect(() => {
-    if (emotion !== 'speaking') {
-      mouthRef.current.open = 0
-      mouthRef.current.viseme = 'viseme_sil'
-      return
-    }
-    const phrase = 'hello, i am your agent face and i am speaking to you now'
-    const periodMs = 3400
-    let raf = 0
-    let start = 0
-    const tick = (ts: number) => {
-      if (!start) start = ts
-      const f = estimateFeatures(phrase, (ts - start) % periodMs)
-      mouthRef.current.open = f.volume
-      mouthRef.current.viseme = f.viseme
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [emotion])
+  const { turns, state } = useConversation()
+  const { emotion, setEmotion } = useEmotion()
+  const {
+    status,
+    handsFree,
+    listening,
+    attachSkin,
+    pttHandlers,
+    toggleHandsFree,
+    sendText,
+    interrupt,
+  } = useOrchestrator()
+
+  const busy =
+    status.phase !== 'idle' && status.phase !== 'error' && status.phase !== 'listening'
+
+  const sttReadout = status.sttEngine
+    ? `${status.sttEngine.toUpperCase()}${status.sttBackend ? ` · ${status.sttBackend.toUpperCase()}` : ''}`
+    : undefined
+
+  function submitDraft(e: React.FormEvent) {
+    e.preventDefault()
+    const text = draft.trim()
+    if (!text) return
+    sendText(text)
+    setDraft('')
+  }
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-background">
-      <AgentFace
-        emotion={emotion}
-        speaking={emotion === 'speaking'}
-        mouthSource="estimated"
-        mouthRef={mouthRef}
+      {/* The face renderer (selected skin) — handed to the orchestrator on ready. */}
+      <FaceSkinHost
+        skinId={state.settings.faceSkin}
+        onReady={attachSkin}
+        className="absolute inset-0 h-full w-full"
       />
-      <FaceHud emotion={emotion} onEmotionChange={setEmotion} />
+
+      {/* HUD: emotion controls + status readouts. */}
+      <FaceHud
+        emotion={emotion}
+        onEmotionChange={setEmotion}
+        subtitle={PHASE_LABEL[status.phase] ?? 'VOICE FACE INTERFACE'}
+        sttReadout={sttReadout}
+      />
+
+      {/* Settings button. */}
       <button
         type="button"
         aria-label="Open settings"
@@ -70,6 +94,88 @@ export default function Home() {
       >
         <Settings className="h-4 w-4" aria-hidden="true" />
       </button>
+
+      {/* Live transcript panel (updates token-by-token during the stream). */}
+      {turns.length > 0 ? (
+        <div className="pointer-events-none absolute left-4 top-20 z-30 flex max-h-[40vh] w-72 flex-col gap-2 overflow-y-auto font-mono text-xs md:left-6">
+          {turns.slice(-6).map((t) => (
+            <div
+              key={t.id}
+              className={
+                t.role === 'user'
+                  ? 'text-muted-foreground'
+                  : 'text-foreground'
+              }
+            >
+              <span className="mr-1 text-[10px] tracking-widest text-muted-foreground/50">
+                {t.role === 'user' ? 'YOU' : 'FACE'}
+              </span>
+              {t.content}
+              {t.pending ? <span className="animate-pulse">▍</span> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Error toast. */}
+      {status.error ? (
+        <div className="pointer-events-none absolute left-1/2 top-16 z-40 -translate-x-1/2 rounded-sm border border-red-500/50 bg-red-950/60 px-3 py-1.5 font-mono text-xs text-red-300">
+          {status.error}
+        </div>
+      ) : null}
+
+      {/* Bottom control bar: Talk + text input + interrupt. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-24 z-40 flex flex-col items-center gap-3 px-4">
+        <div className="pointer-events-auto flex w-full max-w-md items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={handsFree ? listening : status.phase === 'listening'}
+            onPointerDown={handsFree ? undefined : pttHandlers.onPointerDown}
+            onPointerUp={handsFree ? undefined : pttHandlers.onPointerUp}
+            onPointerLeave={handsFree ? undefined : pttHandlers.onPointerLeave}
+            onClick={handsFree ? toggleHandsFree : undefined}
+            className={`flex-1 select-none rounded-sm border px-4 py-3 font-mono text-xs tracking-widest transition-colors ${
+              (handsFree && listening) || status.speaking
+                ? 'border-accent bg-accent/20 text-accent'
+                : 'border-border/60 text-foreground hover:border-accent'
+            }`}
+          >
+            {handsFree
+              ? listening
+                ? 'LISTENING — TAP TO STOP'
+                : 'TAP TO LISTEN (HANDS-FREE)'
+              : 'HOLD TO TALK (OR SPACE)'}
+          </button>
+          <button
+            type="button"
+            onClick={interrupt}
+            disabled={!busy && !status.speaking}
+            className="pointer-events-auto rounded-sm border border-border/60 px-3 py-3 font-mono text-xs tracking-widest text-muted-foreground transition-colors hover:border-red-400 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            STOP
+          </button>
+        </div>
+
+        <form
+          onSubmit={submitDraft}
+          className="pointer-events-auto flex w-full max-w-md items-center gap-2"
+        >
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="…or type a message"
+            className="flex-1 rounded-sm border border-border/60 bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-accent focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded-sm border border-border/60 px-3 py-2 font-mono text-xs tracking-widest text-foreground transition-colors hover:border-accent"
+          >
+            SEND
+          </button>
+        </form>
+      </div>
+
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </main>
   )
