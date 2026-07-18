@@ -362,7 +362,7 @@
       "Verify: the worker loads whisper-base once, reports progress, and transcribes a short clip to correct text offline (airplane mode).",
       "Verify: on a machine without WebGPU it transparently uses WASM and still returns a transcript; a second transcription reuses the resident pipeline with no re-download."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {

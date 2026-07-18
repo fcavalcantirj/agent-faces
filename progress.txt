@@ -702,3 +702,52 @@ cross-origin block, self.crossOriginIsolated true); (2) speaking OVER the agent'
 (barge-in cancels TTS + the in-flight chat); (3) background noise below threshold / a brief click does
 NOT open a turn (misfire); (4) hands-free and push-to-talk are mutually exclusive (selecting one disables
 the other). Full end-to-end also depends on the STT/transcribe + orchestrator tasks landing.
+
+2026-07-18: [frontend] Implement the in-browser Whisper worker (transformers.js, WebGPU with WASM
+fallback) — DONE. Added dependency @huggingface/transformers (4.2.0) and split the browser-Whisper
+path into a headlessly-testable engine + a thin Web Worker shim, mirroring the recorder/vad DI
+pattern (every heavy/browser primitive injected so the whole thing runs under jsdom with fakes —
+no model download, no WebGPU, no AudioContext). lib/stt/whisper-engine.ts: WhisperEngine holds the
+ASR pipeline RESIDENT (load() builds it once; concurrent/repeat calls share one loadPromise, so a
+second transcription reuses the pipeline with NO re-download). load() detects WebGPU
+(navigator.gpu.requestAdapter must actually grant an adapter, not just be present) and tries
+device:'webgpu' first, transparently falling back to device:'wasm' when the WebGPU pipeline throws
+(driver/OOM) OR when no adapter exists — returning the chosen backend so the UI can show $0/private
+mode. modelId is configurable (default Xenova/whisper-base). Progress from transformers.js'
+progress_callback is normalized (normalizeProgress: status/file/progress/loaded/total, junk-tolerant)
+and streamed to an onProgress callback. transcribe(input) accepts EITHER pre-decoded 16 kHz mono PCM
+(Float32Array, preferred — decode on the main thread) OR a clip Blob, which it decodes to 16 kHz mono
+via an injectable decodeAudio (default: OfflineAudioContext decodeAudioData → offline render/resample
+to WHISPER_SAMPLE_RATE=16000, channel 0). A runtime/OOM inference failure (or a decode/load failure)
+surfaces as a typed WhisperError carrying fallbackToHosted:true so the later STT auto-selection layer
+knows to route to hosted /api/transcribe; a malformed request is fallbackToHosted:false. dispose()
+releases the resident pipeline. lib/stt/whisper-worker.ts is the thin off-main-thread shim: it exports
+the message PROTOCOL (WhisperRequest load|transcribe / WhisperResponse progress|ready|result|error)
+and createWhisperWorkerBridge(engine, post) so the STT layer that spawns the worker AND the unit tests
+share the exact contract with no real Worker; the bridge translates each request into engine calls,
+posts progress→ready on load and result on transcribe, and catches EVERY failure into an `error`
+response (never crashes the worker). The dedicated-worker self-wiring is guarded on
+`typeof importScripts === 'function'` (present on a worker global, absent on jsdom/window), so importing
+the module in tests or on the main thread is a no-op — the STT task will spawn it via
+`new Worker(new URL('./whisper-worker.ts', import.meta.url), {type:'module'})`. Reuses the app's COOP/COEP
+credentialless headers (already in next.config.mjs) so the multi-threaded WASM backend gets
+crossOriginIsolated/SharedArrayBuffer and the HF CDN model fetch loads credential-less. TDD: wrote
+lib/stt/whisper-engine.test.ts + whisper-worker.test.ts FIRST (RED) then implemented (GREEN). Verify
+(all headless, all pass): `npm test` 219/219 green incl. 15 new specs — defaults to whisper-base;
+WebGPU preferred + progress reported when an adapter is present; WASM fallback when the WebGPU pipeline
+throws (device order webgpu→wasm); WASM-direct when no adapter; every-backend-fail → WhisperError
+fallbackToHosted:true; pipeline built EXACTLY ONCE across load+two transcribes (resident, no
+re-download); pre-decoded PCM transcribes with backend+duration; a Blob input is decoded via the
+injected decoder before inference; an inference OOM wraps to a WhisperError(fallbackToHosted:true);
+normalizeProgress extracts fields + tolerates junk; and the worker bridge posts progress→ready on load,
+result on transcribe, and error(fallbackToHosted:true) on inference failure / missing-audio /
+unknown-request. `npm run typecheck` clean; `npm run build` compiles and prerenders / and /_not-found
+(+ dynamic /api/chat,/api/config). No app-template dir yet, so no sync-template step. Flipped this task's
+passes -> true.
+UAT (headless_verifiable:false — needs a browser + WebGPU/WASM + a real ~150 MB model download): run
+`npm run dev`, open the app in Chrome/Edge, and confirm (1) the worker loads Xenova/whisper-base ONCE,
+reports download progress, and transcribes a short spoken clip to correct text OFFLINE (airplane mode
+after the first cached download); (2) on a machine WITHOUT WebGPU it transparently uses the WASM backend
+and still returns a transcript (the reported backend flips webgpu→wasm); (3) a second transcription
+reuses the resident pipeline with NO re-download. Full end-to-end (mic→worker→transcript) also depends
+on the Whisper download/caching UX + STT auto-selection + orchestrator tasks landing.

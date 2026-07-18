@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.3",
+    "@huggingface/transformers": "^4.2.0",
     "@react-three/drei": "^10",
     "@react-three/fiber": "^9",
     "@ricky0123/vad-web": "^0.0.30",
