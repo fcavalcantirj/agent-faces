@@ -64,7 +64,7 @@
       "Verify: npm run build succeeds and favicon/OG references resolve (no 404s in npm run dev).",
       "Verify: grep -ri for claude/anthropic/hermes over public/ and app/layout.tsx returns no branding hits."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

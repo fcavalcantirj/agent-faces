@@ -62,3 +62,24 @@ UAT (headless_verifiable:false — needs a browser): run `npm run dev`, open htt
 confirm the ~4,700-particle face renders with no console errors and that all 12 emotions cycle
 via keys 1-0/Q/W and the on-screen emotion buttons (morph transitions, blink, breathing, glitch
 static all animate).
+
+2026-07-18: [frontend] Rebrand public assets, favicon, and layout metadata — DONE.
+Generated neutral brand marks (no Claude/Anthropic/Hermes) from an SVG glyph rendered via
+the project's bundled `sharp`: a "particle-face + lip-sync waveform" mark — two eyes over a
+7-bar audio waveform mouth — in the app theme (bg #07070a, card #101018, accent cyan #6ee7ff,
+fg #e8e8ee). Wrote public/icon.svg (scalable master) + rasterized favicons/app icons:
+public/icon-dark-32x32.png (accent glyph on dark card, for dark UI), public/icon-light-32x32.png
+(ink glyph on light bg, for light UI), public/apple-icon.png (180x180). Added social/preview
+placeholders at the correct dims: public/og.png (1200x630, "Agent Face" wordmark + tagline) and
+the two README-referenced screenshots public/screenshots/hero.png and public/screenshots/talking.png
+(both 1200x630). Updated app/layout.tsx metadata: kept title 'Agent Face', hoisted the description
+to a const, added applicationName, icons (svg + 32px png + apple-icon), openGraph (title/description/
+og.png 1200x630 with alt 'Agent Face'), twitter summary_large_image, and metadataBase (VERCEL_URL
+in prod, localhost:3000 fallback) which also cleared the Next build's metadataBase warning. The
+one-off generator ran from a temp file and was removed — only the committed assets remain.
+Verify (headless, both pass): `npm run typecheck` and `npm run build` succeed with no metadata
+warning; grep -riE 'claude|anthropic|hermes' over public/ + app/layout.tsx returns no hits and no
+asset filename is branded; started `npm run dev` and confirmed the document head references icon.svg,
+icon-dark-32x32.png, apple-icon.png, and og.png, and all 7 assets (icon.svg, both 32px pngs,
+apple-icon.png, og.png, screenshots/hero.png, screenshots/talking.png) return HTTP 200 (no 404s).
+Flipped this task's passes -> true.
