@@ -459,3 +459,40 @@ confirm a session is created and chat returns a streamed reply that reuses the a
 turns (history not resent); (3) deploy to Vercel with a PRIVATE AGENT_BRIDGE_URL and confirm the
 agent-bridge brain is absent from the settings picker (present again with a public HTTPS URL or
 ALLOW_AGENT_BRIDGE_IN_PROD=1).
+
+2026-07-18: [backend] Build the streaming /api/chat route that selects an adapter and streams
+tokens — DONE. Added app/api/chat/route.ts: the ONE HTTP seam the browser hits for a reply,
+regardless of which brain answers. runtime='nodejs' + maxDuration=300 (model I/O is wall-clock
+wait, not billed CPU on Vercel, so long completions get room). POST accepts JSON { provider,
+model, messages, system, temperature }; rejects oversized bodies EARLY — first via the
+Content-Length header (413-coded bad_request before buffering), then a second guard on the actual
+text length — both against MAX_BODY_BYTES=4MB, safely under Vercel's ~4.5MB request cap. Validates
+provider (non-empty string) and normalizes messages (array of {role,content}; content must be a
+string; roles other than 'assistant' coerced to 'user' defensively) — malformed input returns a
+typed 400 bad_request. Resolves the brain via resolveAdapter(provider): an unknown id yields 400
+unknown_provider and a registered-but-keyless/unreachable brain yields 400 unavailable (both
+machine-readable codes via AdapterError.toShape(), mapped through statusForAdapterError with 499
+clamped to 400 for the pre-stream JSON path). On success returns a text/event-stream ReadableStream
+that pumps the adapter's StreamEvents as SSE — one `data: {json}\n\n` frame ENQUEUED PER EVENT so
+each delta flushes immediately (real streaming, not one buffered blob) — with Cache-Control:
+no-cache, no-transform, Connection: keep-alive, and X-Accel-Buffering: no to defeat proxy/CDN
+buffering. request.signal is wired straight into ChatRequest.signal so a client disconnect / barge-in
+aborts the upstream call; the adapter throws AdapterError('aborted') and the route swallows it (the
+socket is gone) instead of writing an error frame. A mid-stream adapter failure is normalized
+(AdapterError passthrough, else normalizeError) into a safe {type:'error'} SSE event (never echoes
+keys); the controller is always closed in a finally. Provider secrets stay server-side (the route
+reads process.env only to pass the env snapshot to streamChat; nothing is echoed). Wired the route
+into the build — it shows as ƒ /api/chat (dynamic). TDD: wrote app/api/chat/route.test.ts FIRST
+(RED — module not found) then implemented (GREEN). Verify (all headless, all pass): `npm test`
+138/138 green incl. 9 new route specs — streams delta/delta/done with the exact SSE headers; the
+FIRST flushed chunk contains only the first delta and NOT 'done' (proves per-delta flush); unknown
+provider -> 400 unknown_provider; keyless brain -> 400 unavailable; a 5MB body -> 400 bad_request;
+invalid JSON -> 400; empty messages -> 400; a mid-stream adapter throw surfaces a safe {type:'error'}
+event after the partial delta; and aborting the client AbortSignal after the first delta halts
+upstream generation (the fake adapter's produced-delta counter freezes and never reaches its full
+count). `npm run typecheck` clean; `npm run build` compiles and prerenders / and /_not-found plus the
+new dynamic /api/chat. Additionally verified over REAL HTTP with `npx next start`: unknown provider,
+keyless anthropic (unavailable), invalid JSON, and empty messages all return the right 400 + code;
+and pointing AGENT_BRIDGE_KIND=ollama at a local mock NDJSON server that emits one chunk every 250ms,
+`curl --no-buffer` received the SSE deltas 250ms APART (05:18:24.864 → .112 → .363 → .614) then the
+terminal done — proving incremental, unbuffered flushing end-to-end. Flipped this task's passes -> true.

@@ -269,7 +269,7 @@
       "Verify: aborting the client mid-stream stops upstream token generation.",
       "Verify: an unknown provider returns 400 and a keyless/unreachable brain returns a clear 'provider unavailable' error."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
