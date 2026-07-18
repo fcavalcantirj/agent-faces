@@ -642,7 +642,7 @@
       "Verify: SKILL.md contains the exact question strings and all branches with correct script paths.",
       "Verify: SKILL.md remains under 500 lines after the additions."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

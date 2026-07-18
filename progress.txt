@@ -1464,3 +1464,30 @@ UAT (headless_verifiable:true, but the live deploy needs a human): a human shoul
 end-to-end deploy — `node deploy.mjs --target vercel` against a linked Vercel project produces a
 live *.vercel.app URL that loads the face and answers by voice over HTTPS, and `--target self-host
 --docker` + `docker compose up` serves the app on a VPS reachable by a private-network agent-bridge.
+
+2026-07-18: [skill] Wire the operating flow into SKILL.md (attach-to-host-agent,
+localhost-or-deploy, target pick) — DONE. Replaced the placeholder "Operating flow"
+section (which had said the wording lands "in a later task") with the full,
+act-on-each-answer sequence. Steps: (1) run check-env.mjs before offering a brain;
+(2) offer Mode B FIRST — if the host agent (Hermes/openclaw/Claude Code/Ollama)
+exposes a reachable endpoint, wire the agent-bridge so the face reuses that agent's
+memory/tools/persona, else fall back to a Mode A hosted key (Anthropic/OpenRouter/
+Groq), then re-run check-env to confirm; (3) ASK verbatim "Run on localhost to try
+it first, or deploy?"; (4) only if deploy, ASK verbatim "Vercel (hosted) or
+self-host on your VPS?". Split into two documented branches: Branch A (localhost)
+runs `node skill/agent-face/scripts/dev.mjs` — noted it frees the dev port first
+(SIGTERM→SIGKILL any prior server) then opens the browser at localhost:3000 so the
+user presses talk and speaks; Branch B (deploy) confirms env with check-env then
+runs ONE target — `deploy.mjs --target vercel` (hosted) or `--target self-host`
+(Docker image for a VPS). Added an explicit after-deploy verification snippet: open
+the printed URL, press talk, and confirm all three of transcript + spoken reply +
+face morph/lip-sync (plus a Mode B reachability note: self-host reaches the agent
+over the private network; Vercel needs a public HTTPS URL or
+ALLOW_AGENT_BRIDGE_IN_PROD=1). Made the wait-for-answer requirement explicit and
+bold at the top of the section and at each ASK. Every script is referenced by
+relative path with a one-line purpose (kept the existing Scripts table too). Only
+SKILL.md changed (a skill doc, not a root app file) so no sync-template run is
+needed. Verify (all headless, all pass): grep confirms both exact question strings
+present verbatim; grep confirms check-env/dev/deploy(vercel|self-host)/scaffold
+script paths and both branches present; `wc -l skill/agent-face/SKILL.md` = 239
+lines (< 500). Flipped this task's passes -> true.

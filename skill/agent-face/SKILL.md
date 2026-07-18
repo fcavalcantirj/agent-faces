@@ -98,31 +98,78 @@ only and optional; missing keys degrade gracefully.
 
 ## Operating flow
 
-Follow this sequence. **Wait for and act on the user's answers** — do not assume
-a default. (This flow is expanded with exact wording in a later task; the shape
-is fixed here.)
+Follow this sequence in order. **You MUST wait for and act on the user's answer
+at each ASK step — never assume a default and never skip ahead.** Each numbered
+step gates the next.
 
-1. **Check the environment.** Run `check-env.mjs` to see which brains, STT, and
-   TTS are configured (secrets are always masked):
-   ```bash
-   node skill/agent-face/scripts/check-env.mjs
-   ```
-2. **Pick a brain.** If the host agent (Hermes / openclaw / Claude Code /
-   Ollama) exposes a reachable endpoint, offer to wire the **agent-bridge**
-   (Mode B) so the face reuses that agent as its brain. Otherwise fall back to a
-   **Mode A** key. See [`references/backends.md`](references/backends.md).
-3. **Ask: localhost first, or deploy?** Let the user choose to try it locally
-   before shipping.
-4. **If localhost** — start the dev server (it kills any previous server first),
-   then open the browser and let the user talk to the face:
-   ```bash
-   node skill/agent-face/scripts/dev.mjs
-   ```
-5. **If deploy** — ask **Vercel (hosted) or self-host on your VPS?**, then:
-   ```bash
-   node skill/agent-face/scripts/deploy.mjs --target vercel      # hosted
-   node skill/agent-face/scripts/deploy.mjs --target self-host   # Docker on your VPS
-   ```
+**1. Check the environment.** Run `check-env.mjs` to see which brains, STT, and
+TTS are configured (secrets are always masked) before offering any brain:
+
+```bash
+node skill/agent-face/scripts/check-env.mjs
+```
+
+**2. Offer a brain (Mode B first, then Mode A).** If the host agent
+(Hermes / openclaw / Claude Code / Ollama) exposes a **reachable endpoint**,
+offer to wire the **agent-bridge** (Mode B) so the face reuses that agent as its
+brain — its memory, tools, and persona. If no reachable agent endpoint exists,
+fall back to a **Mode A** hosted key (Anthropic / OpenRouter / Groq). See
+[`references/backends.md`](references/backends.md) for the per-kind wiring and
+env names. Set the chosen brain's env vars, then re-run `check-env.mjs` to
+confirm the brain is now detected.
+
+**3. ASK the user, verbatim:**
+
+> **Run on localhost to try it first, or deploy?**
+
+Wait for the answer. **Do not assume** — the user may want to ship straight to
+production or try locally first.
+
+**4. ASK — only if they chose deploy — verbatim:**
+
+> **Vercel (hosted) or self-host on your VPS?**
+
+Wait for the answer before running any deploy command.
+
+### Branch A — localhost
+
+Start the dev server. `dev.mjs` **always frees the dev port first** (SIGTERM
+then SIGKILL any previous server on that port) before spawning `npm run dev`,
+then opens the browser. Let the user press **talk** and speak to the face:
+
+```bash
+node skill/agent-face/scripts/dev.mjs
+```
+
+The app comes up on <http://localhost:3000>. Have the user press **talk**, say
+something, and confirm the transcript appears, the reply is spoken, and the face
+morphs / lip-syncs.
+
+### Branch B — deploy
+
+First **confirm the environment** with `check-env.mjs` (a deploy with no brain
+key still boots but has no working brain), then run **one** target depending on
+the user's answer to step 4:
+
+```bash
+# They said "Vercel":
+node skill/agent-face/scripts/deploy.mjs --target vercel      # hosted on Vercel
+
+# They said "self-host":
+node skill/agent-face/scripts/deploy.mjs --target self-host   # Docker image for your VPS
+```
+
+**After-deploy verification** — once the deploy prints a URL:
+
+1. Open the deployed **URL** in a browser.
+2. Press **talk** and speak a short phrase.
+3. Confirm all three: the **transcript** of your speech appears, the brain's
+   **spoken reply** plays, and the **face morphs** (emotion change +
+   audio-driven lip-sync) while it speaks.
+
+If Mode B was chosen, also confirm the reply reflects the running agent's memory
+(self-host reaches it over the private network; Vercel needs a public HTTPS URL
+or `ALLOW_AGENT_BRIDGE_IN_PROD=1`).
 
 To scaffold the app into a fresh directory first (e.g. installing standalone):
 
