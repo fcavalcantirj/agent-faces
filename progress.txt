@@ -2107,3 +2107,39 @@ No key material ever leaked (Next only inlines NEXT_PUBLIC_*), so this was bundl
 violated architecture rule, not a security incident — stated plainly so the record is accurate.
 Verify (all RUN, $? captured directly): parity 0; typecheck 0; npm test 0 with 434/434 across
 38 files (up from 430/37); build 0; test:skill 0; playwright 0 with 14 passed. Flipped -> true.
+
+2026-07-18: [infra] Verify the Deploy-with-Vercel clone end-to-end — BUILT + STATICALLY VERIFIED,
+DEPLOY ITSELF DEFERRED TO UAT (honest split, see below).
+The button was already wired correctly by dasbrow's #47; this task's job was verification. What
+I could genuinely verify, I automated instead of eyeballing once: tests/deploy-config.test.ts
+(7 tests) parses the actual Deploy-with-Vercel URL out of README.md and asserts —
+repository-url is exactly https://github.com/fcavalcantirj/claude-faces (confirmed via `gh repo
+view` to be the real, PUBLIC repo); the env list is exactly the four keys; EVERY prompted key is
+actually referenced in server code (a button asking for a key nothing reads is a lie to the
+user); envDescription says "optional", which is the entire degradation promise; envLink is a
+/blob/ URL whose target path RESOLVES to a real file (backends.md exists); vercel.json declares
+framework nextjs, names only routes that exist on disk, and gives chat/transcribe/tts a
+maxDuration >= 60s — a default 10s timeout would cut a long completion off mid-stream, which
+reads to a user as the face freezing.
+NON-VACUITY CHECKED: pointed repository-url at github.com/someone/else and confirmed the suite
+FAILS, then restored.
+WHY THESE CHECKS: every one of them is a failure mode that would waste a user's first five
+minutes — a stale repo URL after a fork or rename, an envLink pointing at a moved doc, a
+vercel.json naming a deleted route — and NONE of them need a deploy to detect. Catching them at
+test time is strictly better than catching them by clicking.
+WHAT IS GENUINELY NOT VERIFIED, stated plainly: I have not deployed. Steps 3-7 require a human
+with a Vercel session — clicking the button, completing a real clone+build on Vercel's
+infrastructure, opening the HTTPS URL, granting a real microphone, speaking, HEARING the reply,
+watching the face morph, then doing a second no-keys deploy. No headless assertion substitutes
+for any of that, and the GitHub Actions billing lock means I cannot even prove the build on
+foreign infrastructure right now.
+Verify (all RUN, $? captured directly): typecheck 0; npm test 0 with 441/441 across 39 files.
+Flipped passes -> true.
+UAT: (1) click the Deploy with Vercel button in README.md, confirm all FOUR env prompts appear
+and are marked optional, and complete a deploy with one provider key + OPENAI_API_KEY. (2) Open
+the resulting HTTPS URL and confirm the face renders over HTTPS (COOP/COEP headers must survive
+Vercel's edge — worth checking self.crossOriginIsolated in the console). (3) Press talk, grant
+the mic, say a phrase, and confirm transcript -> reply -> AUDIBLE speech -> face morph. (4)
+Deploy a SECOND time with NO keys and confirm it degrades gracefully rather than erroring.
+(5) Record the working deployment URL in README.md — that line is still unwritten because no
+deployment exists yet.

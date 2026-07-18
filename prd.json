@@ -909,7 +909,7 @@
       "Verify: the button-driven deploy builds and serves the app without manual config beyond env prompts.",
       "Verify: the no-keys deploy loads and degrades gracefully rather than erroring."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {
