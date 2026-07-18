@@ -1579,3 +1579,37 @@ for hermes inside that block returns nothing (no Hermes-only references, renders
 confirmed all relative links in both docs resolve (../../../.env.example, ../../../docs/env-contract.md,
 backends.md, deploy.md). Docs-only, no app/root files touched, so no sync-template re-run needed.
 Flipped this task's passes -> true.
+
+2026-07-18: [docs] Write references/face.md and references/voice.md — DONE.
+Added skill/agent-face/references/face.md and .../voice.md, both linking back
+into the real source files (relative paths) so the docs track the code. face.md
+documents: the exact 12 emotions from lib/face-points.ts (neutral, thinking,
+speaking, happy, alert, sad, angry, surprised, confused, sleepy, love, glitch)
+as a table with each emotion's keyboard key + accent hex + the lifecycle phase
+the state machine picks it for; the [[face:<emotion>]] directive syntax (also
+[[emotion:<emotion>]], case/whitespace-tolerant, last-valid-wins, STRIPPED
+before TTS so it is never spoken, hallucinated emotions ignored) with a worked
+example and the emotionFromReply keyword fallback; how the particle geometry
+works (COUNTS head 3000 / eye 420x2 / mouth 660 / brow 200x2, TOTAL 4700; RANGES
+slices; buildTargets returns positions+colors and the renderer lerps toward
+them); how to customize colors/emotions by editing EMOTION_META (hex/rgb) and
+the per-emotion branches of buildTargets (around EYE_X/EYE_Y/MOUTH_Y/BROW_Y);
+and the full 1-0/Q/W keyboard shortcut map. voice.md documents: STT
+(browser Whisper via @huggingface/transformers, WebGPU + WASM fallback, ~150MB
+cached offline, needs crossOriginIsolated; hosted fallback via /api/transcribe —
+Groq whisper-large-v3-turbo when GROQ_API_KEY set, else OpenAI
+OPENAI_TRANSCRIBE_MODEL default whisper-1 with OPENAI_TRANSCRIBE_LANGUAGE /
+OPENAI_TRANSCRIBE_PROMPT knobs); capture (MediaRecorder PTT + Silero VAD
+barge-in, mic needs localhost/HTTPS); TTS (Web Speech $0 default, streamed
+OpenAI gpt-4o-mini-tts via OPENAI_API_KEY, stretch local Kokoro); and the TWO
+lip-sync paths — real FFT analyser (mouthSource 'analyser', OpenAI/Kokoro tap
+the shared AudioContext) vs the estimated envelope (mouthSource 'estimated',
+Web Speech, because SpeechSynthesis exposes no tappable audio node) — with why
+Web Speech cannot be FFT-tapped. Docs-only task (no runtime surface), so no
+code touched and no app-template sync needed. Verify (both pass, headless):
+face.md lists exactly the 12 emotions present in lib/face-points.ts (all 12
+matched as backticked table rows, none missing); every env var named in
+voice.md (OPENAI_API_KEY, GROQ_API_KEY, OPENAI_TRANSCRIBE_MODEL/LANGUAGE/PROMPT)
+exists verbatim in .env.example, and no stray/invented env var appears (the only
+NEXT_PUBLIC mention is the deliberate "never do this" negative example). Flipped
+this task's passes -> true.

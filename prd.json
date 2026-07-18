@@ -704,7 +704,7 @@
       "Verify: face.md lists exactly the 12 emotions present in lib/face-points.ts.",
       "Verify: voice.md's env var names (OPENAI_API_KEY, GROQ_API_KEY, OPENAI_TRANSCRIBE_*) match .env.example."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
