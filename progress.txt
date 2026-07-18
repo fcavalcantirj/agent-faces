@@ -409,3 +409,53 @@ UAT (headless_verifiable:false — needs a live GROQ_API_KEY): with a real key s
 (once the route lands) selecting the groq brain against llama-3.1-8b-instant and confirm it streams
 deltas with a sub-second first token then a done; confirm a deliberately bad key yields an
 unauthorized error, and that a missing GROQ_API_KEY excludes groq from listAvailableAdapters().
+
+2026-07-18: [backend] Implement the agent-bridge adapter (Mode B — reuse a running agent
+as the brain) — DONE. Added lib/providers/agent-bridge.ts implementing the ChatAdapter seam
+for an ALREADY-RUNNING agent, kind selected by AGENT_BRIDGE_KIND. `fetch` is injected via deps
+so the whole adapter is headlessly unit-testable with no live agent/network. Kinds:
+• ollama — POST {url}/api/chat (stream:true, NDJSON lines parsed by a new parseNDJSON reader);
+  stateless per call, so full history + a leading system message are sent; models listed via
+  {url}/api/tags (best-effort, never throws — falls back to the configured AGENT_BRIDGE_MODEL).
+  URL defaults to http://localhost:11434 when unset.
+• hermes — Hermes api_server session flow: ensureHermesSession() POSTs {url}/api/sessions ONCE
+  (parsing id/session_id/sessionId + key/session_key/sessionKey, falling back to the auth key),
+  caches {id,key} on the adapter instance, then POSTs {url}/api/sessions/{id}/chat with the
+  X-Hermes-Session-Key header. Because the agent is STATEFUL and holds the thread, we send ONLY
+  the latest user turn (lastUserContent), not the whole history. Auth + base URL via
+  HERMES_API_BASE_URL/HERMES_API_KEY (preferred) or AGENT_BRIDGE_URL/KEY; a bare HERMES_API_BASE_URL
+  implies kind=hermes. Response transport is chosen by content-type (event-stream -> SSE else NDJSON).
+• openclaw / claude-code / openai-compatible — POST {url}/v1/chat/completions (Bearer key), parsed
+  as SSE via the shared parseSSEStream.
+All three transports funnel through one pumpJsonEvents() that extracts deltas ROBUSTLY across
+shapes (choices[0].delta.content / message.content / response / delta / content), captures a
+finish reason (finish_reason / done_reason), breaks on an object-level done marker (done:true /
+type:'done' / finish_reason), honors req.signal for barge-in (stops deltas then throws
+AdapterError('aborted')), and always ends with a {type:'done'}. available(env) is a PURE read (no
+network probe): requires a valid kind + resolvable URL, then gates on environment — SELF_HOST=1
+always reachable (private network next to the agent); on Vercel (VERCEL/VERCEL_ENV) a private URL
+is HIDDEN unless ALLOW_AGENT_BRIDGE_IN_PROD=1 or the URL is a public HTTPS/tunnel
+(isPublicHttpsUrl rejects localhost/.local/127.0.0.1/RFC-1918 hosts); localhost dev reaches a
+private agent directly. An unreachable endpoint throws a clear "agent offline" AdapterError
+(code 'network', message names the kind + base URL). Wired into the registry: lib/providers/index.ts
+does the ONE registerAdapter('agent-bridge', createAgentBridgeAdapter) line (agent-bridge is already
+4th in the documented priority anthropic>openrouter>groq>agent-bridge). TDD: wrote
+lib/providers/agent-bridge.test.ts FIRST (RED — module not found) then implemented (GREEN).
+Verify (all headless, all pass): `npm test` 129/129 green incl. 16 new agent-bridge specs —
+availability off with no config; on with kind+URL / ollama-default-URL / HERMES_API_BASE_URL alias;
+HIDDEN on Vercel with a private URL but allowed via ALLOW_AGENT_BRIDGE_IN_PROD / public HTTPS /
+SELF_HOST; excluded from listAvailableAdapters() in prod with a private URL (Verify #3); ollama
+NDJSON yields message.content deltas then done with system+full-history in the body; ollama
+listModels via /api/tags with the configured default marked; openclaw SSE posts /v1/chat/completions
+with a Bearer token and streams choices deltas; hermes creates a session then chats with
+X-Hermes-Session-Key sending ONLY the latest user turn 'c'; barge-in stops after the first delta
+with code 'aborted'; an unreachable endpoint (fetch throws TypeError) yields a 'network' error whose
+message contains "offline". `npm run typecheck` clean; `npm run build` compiles and prerenders /
+and /_not-found. Flipped this task's passes -> true.
+UAT (headless_verifiable:false — needs a running external agent): (1) with a local Ollama running
+(AGENT_BRIDGE_KIND=ollama), confirm streamChat yields deltas from a local model and listModels shows
+`ollama list`'s models; (2) with AGENT_BRIDGE_KIND=hermes against a reachable Hermes api_server,
+confirm a session is created and chat returns a streamed reply that reuses the agent's memory across
+turns (history not resent); (3) deploy to Vercel with a PRIVATE AGENT_BRIDGE_URL and confirm the
+agent-bridge brain is absent from the settings picker (present again with a public HTTPS URL or
+ALLOW_AGENT_BRIDGE_IN_PROD=1).

@@ -250,7 +250,7 @@
       "Verify: with AGENT_BRIDGE_KIND=hermes against a reachable Hermes api_server, a session is created and chat returns a reply.",
       "Verify: in production with a private (non-public) AGENT_BRIDGE_URL, the adapter is absent from listAvailableAdapters()."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {

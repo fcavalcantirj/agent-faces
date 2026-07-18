@@ -121,10 +121,12 @@ function priorityIndex(id: string): number {
 import { createAnthropicAdapter } from '@/lib/providers/anthropic'
 import { createOpenRouterAdapter } from '@/lib/providers/openrouter'
 import { createGroqAdapter } from '@/lib/providers/groq'
+import { createAgentBridgeAdapter } from '@/lib/providers/agent-bridge'
 
 registerAdapter('anthropic', createAnthropicAdapter)
 registerAdapter('openrouter', createOpenRouterAdapter)
 registerAdapter('groq', createGroqAdapter)
+registerAdapter('agent-bridge', createAgentBridgeAdapter)
 
 export {
   AdapterError,
