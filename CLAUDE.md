@@ -26,8 +26,9 @@ Face = the reused **EIDOLON** particle renderer (12 emotions) with real audio-dr
   (RED → GREEN → REFACTOR). Docs/infra tasks may have no test; use judgment.
 - **Keep files focused** — ~500 lines max; split if larger. `SKILL.md` **must** stay ≤ 500 lines.
 - **Secrets are server-side only** — never `NEXT_PUBLIC_*`; all provider keys live in route handlers.
-- **Reuse, don't reinvent** — port from the READ-ONLY reference at **`../fuguFaces`**.
-  **NEVER modify anything under `../fuguFaces`** — copy out only.
+- **Reuse, don't reinvent** — the EIDOLON particle-face source is vendored at
+  **`reference/fugu-face/`**; port from there. The original lives at `../fuguFaces`
+  on Felipe's machine — never modify it.
 - **Match the stack** — Next.js 16 (App Router), React 19, TypeScript, **npm**. Kill any
   previous dev server before starting a new one.
 - **Frontmatter name rule** — the skill's `SKILL.md` `name:` must NOT contain `claude` or
@@ -64,3 +65,13 @@ Env toggles: `PRD_FILE` (default `prd.json`), `RALPH_PUSH=0` (commit only, no pu
 **Safety:** Ralph runs Claude Code with `--dangerously-skip-permissions` and, by default,
 auto-`git push` on every task to a public repo. Use `RALPH_PUSH=0`, a branch, or a private
 mirror if you don't want unattended public pushes. Cost/context is reported, not capped.
+
+## Verifying in a headless / overnight run
+
+You run **unattended, headless, with no human and no browser.** Before flipping a task to `passes: true`:
+
+- **Run every headless check the task lists** — `npm run typecheck`, `npm run build`, unit/integration tests, `grep`/file assertions. These GATE the task. If a check you *can* run is failing, the task is NOT done — fix it.
+- **Set up the test runner (`vitest`) the first time a task needs it** if it isn't installed yet (add the dep + `vitest.config.ts` + a `test` script). Don't wait for the later harness task.
+- **Some `Verify:` steps you physically cannot run headlessly** — they need a browser, microphone, audible playback, WebGPU, a live/paid API key, a running external agent (Ollama/Hermes), a Docker daemon, network toggling ("airplane mode"), or a human click. For each: implement to spec, write a **mock-based** headless test where feasible (mock the SSE transport / audio / AnalyserNode / `/api/config`), make all runnable checks pass, then append a `UAT:` line to `progress.txt` naming what a human must still confirm — **and still mark the task `passes: true`** so the run can reach 100%.
+- **If you edit root app files after `skill/agent-face/assets/app-template/` exists**, re-run `node skill/agent-face/scripts/sync-template.mjs` in the same task so the CI parity check stays green.
+- **Never fabricate.** "Deferred to UAT" is honest; claiming you verified something in a browser you never opened is not.

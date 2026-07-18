@@ -39,8 +39,8 @@
     "description": "Port the EIDOLON particle face component and neutralize branding",
     "steps": [
       "PREREQUISITE: DEPENDS ON 'Scaffold Next.js 16 + React 19 + TypeScript + Tailwind v4 base config'.",
-      "Copy lib/face-points.ts from the fuguFaces reference (READ-ONLY source — copy out, never modify it): 12 emotions, COUNTS head/eye/mouth/brow, RANGES, EMOTION_META, buildTargets, TOTAL (~4,700 particles).",
-      "Copy components/agent-face.tsx (R3F Canvas + ParticleFace + Dust + OrbitControls), components/face-hud.tsx, and lib/utils.ts.",
+      "Copy face-points.ts from reference/fugu-face/ (vendored EIDOLON source; original at ../fuguFaces on Felipe's machine — never modify it) into lib/face-points.ts: 12 emotions, COUNTS head/eye/mouth/brow, RANGES, EMOTION_META, buildTargets, TOTAL (~4,700 particles).",
+      "Copy agent-face.tsx (R3F Canvas + ParticleFace + Dust + OrbitControls), face-hud.tsx, and utils.ts from reference/fugu-face/ into components/agent-face.tsx, components/face-hud.tsx, and lib/utils.ts.",
       "In face-hud.tsx, rename the hardcoded 'EIDOLON-01 / SPIKE v0.1' HUD label to a neutral configurable title (default 'AGENT FACE'); keep the 1-0/Q/W emotion keyboard shortcuts.",
       "grep the copied files for hermes/Hermes/EIDOLON and genericize residual references.",
       "Confirm the 12 emotions still enumerate: neutral, thinking, speaking, happy, alert, sad, angry, surprised, confused, sleepy, love, glitch.",
@@ -54,7 +54,7 @@
     "description": "Rebrand public assets, favicon, and layout metadata",
     "steps": [
       "PREREQUISITE: DEPENDS ON 'Scaffold Next.js 16 + React 19 + TypeScript + Tailwind v4 base config'.",
-      "Replace fuguFaces-specific icons in public/ with neutral ones: icon.svg, icon-light-32x32.png, icon-dark-32x32.png, apple-icon.png (no Claude/Anthropic/Hermes marks).",
+      "Add neutral icons in public/ (icon.svg, icon-light-32x32.png, icon-dark-32x32.png, apple-icon.png) — no Claude/Anthropic/Hermes marks.",
       "Add public/og.png (1200x630) social preview placeholder and public/screenshots/{hero.png,talking.png} placeholders referenced by the README.",
       "Update app/layout.tsx metadata: title 'Agent Face', a description of a talking, lip-syncing agent face, and icon wiring to the new assets.",
       "Ensure no asset filename or alt text contains 'claude', 'anthropic', or 'hermes'.",
@@ -69,7 +69,7 @@
     "steps": [
       "PREREQUISITE: DEPENDS ON 'Scaffold Next.js 16 + React 19 + TypeScript + Tailwind v4 base config'.",
       "Create .env.example. Mode A chat keys (all optional): ANTHROPIC_API_KEY, ANTHROPIC_DEFAULT_MODEL, OPENROUTER_API_KEY, OPENROUTER_DEFAULT_MODEL, GROQ_API_KEY, GROQ_DEFAULT_MODEL, OPENAI_API_KEY.",
-      "Mode B agent-bridge (optional): AGENT_BRIDGE_KIND (hermes|openclaw|claude-code|ollama|openai-compatible), AGENT_BRIDGE_URL, AGENT_BRIDGE_KEY, AGENT_BRIDGE_MODEL; plus fuguFaces-compatible HERMES_API_BASE_URL and HERMES_API_KEY.",
+      "Mode B agent-bridge (optional): AGENT_BRIDGE_KIND (hermes|openclaw|claude-code|ollama|openai-compatible), AGENT_BRIDGE_URL, AGENT_BRIDGE_KEY, AGENT_BRIDGE_MODEL; plus Hermes-compatible HERMES_API_BASE_URL and HERMES_API_KEY.",
       "STT + deploy knobs: OPENAI_TRANSCRIBE_MODEL (default whisper-1), OPENAI_TRANSCRIBE_LANGUAGE, OPENAI_TRANSCRIBE_PROMPT, SELF_HOST, ALLOW_AGENT_BRIDGE_IN_PROD.",
       "Document in comments that every key is optional and the app degrades gracefully: no chat brain -> friendly 'configure a brain' message; no OPENAI/GROQ key -> browser Whisper STT + Web Speech TTS; agent-bridge appears only when its endpoint is reachable.",
       "Write docs/env-contract.md specifying the chat-brain selection priority (explicit user pick, else ANTHROPIC -> OPENROUTER -> GROQ -> agent-bridge) and the exact env names so check-env.mjs and backends.md stay consistent.",
@@ -147,7 +147,7 @@
     "description": "Implement the conversation-lifecycle emotion state machine",
     "steps": [
       "Create lib/face/emotion-machine.ts exporting a pure reducer nextEmotion(phase, signals) mapping lifecycle to Emotion: idle->neutral, listening->alert, transcribing/waiting->thinking, streaming/speaking->speaking, clarifying->confused, error->glitch, success->happy, failure->sad.",
-      "Support model directive overrides: parse a trailing [[face:<emotion>]] token (reuse the fuguFaces extractFaceDirective regex) as the resting emotion after speaking.",
+      "Support model directive overrides: parse a trailing [[face:<emotion>]] token (match 'face' or 'emotion', a colon, and one lowercase emotion word inside double square brackets) as the resting emotion after speaking.",
       "Add keyword-sentiment fallback (error/warning/clarify/success -> sad/alert/confused/happy) when no directive is present (port emotionFromReply).",
       "Add hold/decay timing so transient states (surprised/happy) settle back to neutral after N ms.",
       "Expose a useEmotion() hook or store that the orchestrator updates and FaceSkin subscribes to.",
@@ -225,7 +225,7 @@
     "steps": [
       "DEPENDS ON: 'Define the pluggable ChatAdapter interface, registry, and SSE helper'.",
       "Create lib/providers/agent-bridge.ts implementing ChatAdapter for an ALREADY-RUNNING agent, kind selected by AGENT_BRIDGE_KIND:",
-      "  - hermes: port fuguFaces /api/hermes (ensureSession via POST /api/sessions, then POST /api/sessions/{id}/chat with X-Hermes-Session-Key; auth via HERMES_API_BASE_URL/HERMES_API_KEY or AGENT_BRIDGE_URL/KEY).",
+      "  - hermes: Hermes api_server session flow (ensureSession via POST /api/sessions, then POST /api/sessions/{id}/chat with X-Hermes-Session-Key; auth via HERMES_API_BASE_URL/HERMES_API_KEY or AGENT_BRIDGE_URL/KEY).",
       "  - ollama: POST {url}/api/chat with stream:true (NDJSON lines); models via {url}/api/tags.",
       "  - openclaw / claude-code / openai-compatible: POST {url}/v1/chat/completions (or the bridge's chat endpoint) parsed as SSE.",
       "Reuse the agent's own memory/tools/persona: pass a stable session/thread id and do NOT resend full history when the agent is stateful.",
@@ -302,7 +302,7 @@
     "category": "frontend",
     "description": "Implement microphone capture and push-to-talk recording",
     "steps": [
-      "Create lib/audio/recorder.ts wrapping getUserMedia({audio:true}) + MediaRecorder, reusing the fuguFaces MIME negotiation (audio/webm;codecs=opus preferred, mp4/ogg/wav fallbacks).",
+      "Create lib/audio/recorder.ts wrapping getUserMedia({audio:true}) + MediaRecorder with opus-first MIME negotiation (audio/webm;codecs=opus preferred, mp4/ogg/wav fallbacks).",
       "Expose start(), stop() returning a Blob, and a live MediaStream getter (needed for VAD and any stream-based lip-sync).",
       "Request the mic only on the first record gesture; surface permission errors as recoverable UI state, not a crash.",
       "Enforce a max clip length/size guard to stay well under the 4.5 MB hosted-STT request cap; auto-stop long recordings.",
@@ -361,7 +361,7 @@
     "category": "backend",
     "description": "Upgrade /api/transcribe into a hosted STT fallback (Groq whisper-large-v3-turbo, OpenAI fallback)",
     "steps": [
-      "Rewrite app/api/transcribe/route.ts (start from the fuguFaces OpenAI proxy) to accept a multipart audio field named 'audio' and select a provider: Groq whisper-large-v3-turbo when GROQ_API_KEY is set (cheapest/fastest), else OpenAI gpt-4o-transcribe/whisper-1 when OPENAI_API_KEY is set.",
+      "Create app/api/transcribe/route.ts to accept a multipart audio field named 'audio' and select a provider: Groq whisper-large-v3-turbo when GROQ_API_KEY is set (cheapest/fastest), else OpenAI gpt-4o-transcribe/whisper-1 when OPENAI_API_KEY is set.",
       "Keep runtime='nodejs'; enforce a byte cap comfortably under the 4.5 MB request limit and reject oversize clips with 413.",
       "Forward to Groq's OpenAI-compatible https://api.groq.com/openai/v1/audio/transcriptions or OpenAI /v1/audio/transcriptions with model + optional language + prompt (vocab hints).",
       "Return { text, provider, model, latencyMs }; normalize upstream errors to safe JSON with correct status codes.",
@@ -464,7 +464,7 @@
     "steps": [
       "DEPENDS ON: recorder, VAD, STT auto-selection, chat client, TTS router, emotion machine, and the face-skin.",
       "Create lib/orchestrator.ts (or a useConversation hook) that owns the lifecycle FSM and sequences: capture (PTT or VAD) -> transcribe(blob, mode) -> streamChat -> chunked speak -> lip-sync -> emotion transitions.",
-      "Rebuild app/page.tsx around the orchestrator + FaceSkin + FaceHud + SettingsPanel instead of the fuguFaces /api/hermes + speechSynthesis path.",
+      "Rebuild app/page.tsx around the orchestrator + FaceSkin + FaceHud + SettingsPanel (replacing any earlier request/response + speechSynthesis placeholder).",
       "Start TTS on the first streamed sentence (not after full completion) for low latency; keep the transcript panel updating live.",
       "Drive FaceSkin.setEmotion/setSpeaking/setMouth from orchestrator events; strip [[face:x]] before speaking and apply it as the resting emotion.",
       "Implement global interrupt (barge-in): a new user utterance or VAD-during-speech aborts the chat AbortController and calls TTS stop().",
@@ -505,11 +505,24 @@
     "passes": false
   },
   {
+    "category": "infra",
+    "description": "Add self-host artifacts (Dockerfile + compose) for hosting next to the agent",
+    "steps": [
+      "PREREQUISITE: DEPENDS ON 'Wire the full conversation orchestrator' (buildable app) and the app/api/* routes.",
+      "Create a multi-stage Dockerfile (install -> next build -> next start on PORT) and set Next output: 'standalone' for a slim runtime image.",
+      "Create docker-compose.yml running the app plus an AGENT_BRIDGE_URL env pointing at the agent's private network address, with all env vars passed via compose/.env.",
+      "Add a self-host section (in references/deploy.md) describing running on the agent's own VPS so Mode B reaches the agent over the private network with no tunnel.",
+      "Verify: docker compose up serves the app on the configured port.",
+      "Verify: with an agent reachable on the same network, Mode B (agent-bridge) connects over its private URL without a tunnel."
+    ],
+    "passes": false
+  },
+  {
     "category": "skill",
     "description": "Package the app template into skill assets with a drift-parity check",
     "steps": [
       "PREREQUISITE: DEPENDS ON 'Create the skill/agent-face package and SKILL.md thin router' and a building app (typecheck/build pass).",
-      "Create skill/agent-face/assets/app-template/ as a self-contained copy of the deployable app: app/, components/, lib/, public/, package.json, package-lock.json, tsconfig.json, next.config.mjs, postcss.config.mjs, components.json, vercel.json, next-env.d.ts, Dockerfile, docker-compose.yml, and a template .env.example.",
+      "Create skill/agent-face/assets/app-template/ as a self-contained copy of the deployable app: app/, components/, lib/, public/, package.json, package-lock.json, tsconfig.json, next.config.mjs, postcss.config.mjs, vercel.json, next-env.d.ts, Dockerfile, docker-compose.yml, and a template .env.example.",
       "Add skill/agent-face/assets/app-template/README.md pointing back to the skill references.",
       "Set the single-source-of-truth policy: the repo-root app is canonical and the template is a synced snapshot; add skill/agent-face/scripts/sync-template.mjs that regenerates the template from the repo root and fails on divergence (--check).",
       "Add a .gitignore inside the template so scaffolded copies ignore node_modules/.next/.env*.local; exclude node_modules/.next/.vercel from the packaged template.",
@@ -839,19 +852,6 @@
       "Record the working deployment URL in the README.",
       "Verify: the button-driven deploy builds and serves the app without manual config beyond env prompts.",
       "Verify: the no-keys deploy loads and degrades gracefully rather than erroring."
-    ],
-    "passes": false
-  },
-  {
-    "category": "infra",
-    "description": "Add self-host artifacts (Dockerfile + compose) for hosting next to the agent",
-    "steps": [
-      "PREREQUISITE: DEPENDS ON 'Wire the full conversation orchestrator' (buildable app) and the app/api/* routes.",
-      "Create a multi-stage Dockerfile (install -> next build -> next start on PORT) and set Next output: 'standalone' for a slim runtime image.",
-      "Create docker-compose.yml running the app plus an AGENT_BRIDGE_URL env pointing at the agent's private network address, with all env vars passed via compose/.env.",
-      "Add a self-host section (in references/deploy.md) describing running on the agent's own VPS so Mode B reaches the agent over the private network with no tunnel.",
-      "Verify: docker compose up serves the app on the configured port.",
-      "Verify: with an agent reachable on the same network, Mode B (agent-bridge) connects over its private URL without a tunnel."
     ],
     "passes": false
   },

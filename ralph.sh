@@ -84,7 +84,7 @@ for ((i=1; i<=$1; i++)); do
 • TDD where there is a runtime surface: write a failing test FIRST, then implement (RED→GREEN→REFACTOR). Docs/infra tasks may have no test — use judgment. \
 • Keep files focused: ~500 lines max, split if larger. SKILL.md MUST stay <= 500 lines. \
 • Secrets are server-side ONLY — never NEXT_PUBLIC_*; all provider keys live in route handlers. \
-• Reuse, don't reinvent: port from the READ-ONLY reference at ../fuguFaces. NEVER modify anything under ../fuguFaces. \
+• Reuse, don't reinvent: the EIDOLON particle-face source is vendored at reference/fugu-face/ — port from there. Never modify ../fuguFaces if it exists (read-only). \
 • Match the stack: Next.js 16 App Router, React 19, TypeScript, npm. \
 \
 === WORKFLOW === \
