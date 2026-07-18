@@ -253,3 +253,41 @@ spoken text, and a store flow speaking->idle settles the face onto happy; direct
 "failed"/"error" sentiment keyword; transient happy decays to the resting emotion after the hold window
 (fake timers); blink-suppressed set matches the renderer. `npm run typecheck` clean; `npm run build`
 compiles and prerenders / and /_not-found. Flipped this task's passes -> true.
+
+2026-07-18: [backend] Define the pluggable ChatAdapter interface, registry, and SSE helper — DONE.
+Built the ONE brain seam every provider (Mode A hosted API + Mode B bridged running agent)
+implements, so /api/chat never learns a provider's name. lib/providers/types.ts defines
+ChatMessage {role:user|assistant, content}, ChatRequest {model?, messages, system?, temperature?,
+signal?}, ModelInfo {id,label?,isDefault?}, and the StreamEvent union (delta{text} | done{reason?}
+| error{AdapterErrorShape}) that the route serializes to SSE and the browser parses back. The
+ChatAdapter interface is {id, label, mode:'A'|'B', available(env), listModels(env?), streamChat(req,
+env?)}. available() takes an env SNAPSHOT (new ProviderEnv = Record<string,string|undefined> alias,
+which process.env satisfies but so does a plain {KEY:val} object) rather than reading process.env
+internally — so availability is a pure function /api/config and tests evaluate against any env.
+Standardized error normalization via a real AdapterError class (instanceof intact via
+Object.setPrototypeOf; carries code/provider?/status?, toShape() -> wire-safe AdapterErrorShape) over
+a 9-code AdapterErrorCode union, plus statusForAdapterError() mapping each code to an HTTP status
+(unknown_provider/unavailable/bad_request->400, unauthorized->401, rate_limited->429, aborted->499,
+upstream_error/network->502, unknown->500). lib/providers/sse.ts wraps eventsource-parser@3.1.0
+(added dep): parseSSEStream(body, {provider?}) reads a fetch ReadableStream, feeds the push-based
+parser, queues decoded events and yields each event's data payload (dropping the [DONE] sentinel) —
+one place for OpenAI-style stream parsing (OpenRouter/Groq/openai-compatible bridge reuse it;
+Anthropic uses its own typed SDK stream). Also errorForStatus(status,provider) (401/403->unauthorized,
+429->rate_limited, 5xx->upstream_error, else bad_request), isAbort(), and normalizeError(err,provider)
+(preserves an existing AdapterError, maps AbortError->aborted, TypeError->network, else unknown) so
+nothing untyped escapes the seam. lib/providers/index.ts is the registry: a factories Map (id->factory)
++ memoized instances Map, registerAdapter/unregisterAdapter, getAdapter, resolveAdapter(id,env) (throws
+unknown_provider if unregistered, unavailable if the key/endpoint is missing), listAdapters,
+listAvailableAdapters(env) (filters by available), selectDefaultAdapter(env) (documented priority
+anthropic>openrouter>groq>agent-bridge from docs/env-contract.md via registeredAdapterIds sort). The
+"Built-in adapters" block is left empty with the ONE-LINE registration pattern documented — concrete
+adapters (anthropic/openrouter/groq/agent-bridge) land in their own later tasks and slot in here.
+TDD: wrote lib/providers/providers.test.ts FIRST (RED) then implemented (GREEN). Verify (all headless,
+all pass): `npm test` 85/85 green incl. 14 new specs — a no-op FakeAdapter resolves to a memoized
+singleton, resolveAdapter throws unknown_provider/unavailable appropriately, listAvailableAdapters
+returns ONLY adapters whose env keys are present (with-key vs without-key), priority ordering +
+selectDefaultAdapter picks the highest-priority available brain, AdapterError instanceof + toShape +
+status mapping, parseSSEStream parses OpenAI-style data: chunks / drops [DONE] / handles an event split
+across two byte chunks, and errorForStatus/normalizeError code mapping; `npm run typecheck` clean (the
+FakeAdapter typechecks against ChatAdapter); `npm run build` compiles and prerenders / and /_not-found.
+Flipped this task's passes -> true.

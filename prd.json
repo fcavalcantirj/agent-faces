@@ -180,7 +180,7 @@
       "Verify: npm run typecheck passes with a no-op FakeAdapter registered.",
       "Verify: listAvailableAdapters() returns only adapters whose required env keys / reachable endpoints are present."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
