@@ -35,8 +35,6 @@ CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'
 MAGENTA='\033[0;35m'; BLUE='\033[0;34m'; RED='\033[0;31m'
 BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
 
-CONTEXT_WARNING_THRESHOLD=120000
-
 # Push instruction injected into the prompt based on RALPH_PUSH.
 if [ "$RALPH_PUSH" = "1" ]; then
   PUSH_STEP="8. PUSH: run 'git push' to publish the commit."
@@ -47,18 +45,6 @@ fi
 format_time() {
   local secs=$1
   printf "%02d:%02d:%02d" $((secs/3600)) $((secs%3600/60)) $((secs%60))
-}
-
-print_exceeded_summary() {
-  if [ ${#exceeded_iters[@]} -gt 0 ]; then
-    echo ""
-    echo -e "${RED}${BOLD}───────────────────────────────────────────────────────────${NC}"
-    echo -e "${RED}${BOLD}  ⚠️  ${#exceeded_iters[@]} iteration(s) exceeded ${CONTEXT_WARNING_THRESHOLD} tokens:${NC}"
-    for idx in "${!exceeded_iters[@]}"; do
-      echo -e "${RED}     • Iteration ${exceeded_iters[$idx]}: ${exceeded_tokens[$idx]} tokens${NC}"
-    done
-    echo -e "${RED}${BOLD}───────────────────────────────────────────────────────────${NC}"
-  fi
 }
 
 if [ -z "$1" ]; then
@@ -81,8 +67,6 @@ completed_iterations=0
 total_cost=0
 total_input_tokens=0
 total_output_tokens=0
-declare -a exceeded_iters=()
-declare -a exceeded_tokens=()
 
 for ((i=1; i<=$1; i++)); do
   echo ""
@@ -137,10 +121,6 @@ CRITICAL: \
     output_tokens=$(jq -r '.usage.output_tokens // 0' "$tmpfile")
     iter_context=$((input_tokens + cache_read + cache_create))
 
-    if [ "$iter_context" -gt "$CONTEXT_WARNING_THRESHOLD" ]; then
-      exceeded_iters+=("$i"); exceeded_tokens+=("$iter_context")
-    fi
-
     total_cost=$(echo "$total_cost $cost" | awk '{printf "%.4f", $1 + $2}')
     total_input_tokens=$((total_input_tokens + iter_context))
     total_output_tokens=$((total_output_tokens + output_tokens))
@@ -152,12 +132,6 @@ CRITICAL: \
     echo -e "${BLUE}  📤 OUTPUT:  ${BOLD}${output_tokens}${NC}${BLUE} tokens${NC}"
     echo -e "${BLUE}  💰 COST:    ${BOLD}\$${cost}${NC}"
     echo -e "${BLUE}───────────────────────────────────────────────────────────${NC}"
-
-    if [ "$iter_context" -gt "$CONTEXT_WARNING_THRESHOLD" ]; then
-      echo ""
-      echo -e "${RED}${BOLD}  ⚠️  WARNING: CONTEXT EXCEEDED ${CONTEXT_WARNING_THRESHOLD} TOKENS! (${iter_context})${NC}"
-      echo ""
-    fi
   else
     echo -e "${YELLOW}Warning: Could not parse JSON output${NC}"
     cat "$tmpfile"
@@ -181,7 +155,6 @@ CRITICAL: \
     echo -e "${BLUE}  📤 Total output: ${BOLD}${total_output_tokens}${NC}${BLUE} tokens${NC}"
     echo -e "${BLUE}  💰 Total cost: ${BOLD}\$${total_cost}${NC}"
     echo -e "${GREEN}  📊 $(./progress.sh)${NC}"
-    print_exceeded_summary
     exit 0
   fi
 done
@@ -200,4 +173,3 @@ echo -e "${BLUE}  🔢 Total context: ${BOLD}${total_input_tokens}${NC}${BLUE} t
 echo -e "${BLUE}  📤 Total output: ${BOLD}${total_output_tokens}${NC}${BLUE} tokens${NC}"
 echo -e "${BLUE}  💰 Total cost: ${BOLD}\$${total_cost}${NC}"
 echo -e "${GREEN}  📊 $(./progress.sh)${NC}"
-print_exceeded_summary
