@@ -655,3 +655,50 @@ press-and-hold the Talk button) and confirm the mic permission prompt appears on
 releasing yields a non-empty opus/webm clip under the size cap, that denying permission shows a recoverable
 hint and leaves typing usable (no crash), that a >60s hold auto-stops, and that Space typed inside a text
 field inserts a space instead of recording.
+
+2026-07-18: [frontend] Add hands-free voice activity detection (VAD) with Silero/ONNX — DONE.
+Installed @ricky0123/vad-web (0.0.30) + its onnxruntime-web (1.27.0) peer. Added lib/audio/vad.ts
+— a VadController wrapping the library's MicVAD behind a headlessly-testable seam: the heavy
+MicVAD.new (which pulls in onnxruntime-web + the Silero worklet/model) is created LAZILY on start()
+AND behind an INJECTABLE createMicVAD dep, and the WAV encoder + resumeAudio are injected too, so the
+whole controller runs under jsdom with fakes (no ONNX, no worklet, no real mic). start() resumes the
+SHARED AudioContext on the gesture then loads-once + starts the VAD (state idle->loading->listening);
+the shared mic MediaStream + AudioContext are threaded into MicVAD (getStream/audioContext) so the
+worklet taps the same graph the recorder/lipsync use (source->worklet only, no speaker route, no
+feedback). Callbacks map the conversation lifecycle: onSpeechStart -> state 'speech' (orchestrator sets
+lifecycle 'listening'/alert); onSpeechEnd -> WAV-encodes the captured 16kHz Float32Array into an
+audio/wav Blob + {audio,sampleRate,blob,durationMs} VadSegment handed to the STT layer, then back to
+'listening'; onVADMisfire -> onMisfire (a debounced short noise, NO segment). Debounce/tuning is
+ms-based to match the installed library (NOTE: the PRD step's frame-based names minSpeechFrames/
+redemptionFrames are the OLD vad-web API; v0.0.30 uses minSpeechMs/redemptionMs/preSpeechPadMs — built
+against the REAL API): defaults positiveSpeechThreshold 0.5, negativeSpeechThreshold 0.35, minSpeechMs
+400 (debounce), redemptionMs 1400, preSpeechPadMs 800, model 'legacy'; all overridable via VadOptions.
+Barge-in: setFaceSpeaking(true) makes the NEXT detected speech-start fire onBargeIn (orchestrator cancels
+TTS + the in-flight chat) in addition to onSpeechStart; cleared -> no barge-in. pause() stops but keeps
+the model loaded (instant re-start); destroy() tears down + marks disposed so a later start() is a no-op;
+a load failure parks state 'error' and rejects start(). Self-hosted assets so they resolve under the app's
+COEP headers: vad.ts points baseAssetPath + onnxWASMBasePath at '/vad/', and scripts/setup-vad-assets.mjs
+copies the worklet bundle + both Silero .onnx models + the ORT threaded/jsep wasm (+ .mjs loaders) from
+node_modules into public/vad/ (idempotent, size-checked). Wired as npm predev/prebuild (runs locally AND
+on Vercel before next build) + a setup:vad script; public/vad/ is gitignored (regenerated binaries, ~44MB).
+Toggleable in settings + mutually exclusive with push-to-talk: extended ConversationSettings with
+inputMode: 'push-to-talk' | 'hands-free' (default push-to-talk, single enum = mutual exclusivity), added
+setInputMode (persisted + version-tolerant restore via normalizeInputMode) to the store + the
+useConversation hook. TDD: wrote lib/audio/vad.test.ts + the conversation inputMode spec FIRST (RED) then
+implemented (GREEN). Verify (all headless, all pass): `npm test` 204/204 green incl. 13 new vad specs —
+loads once + starts listening (idempotent start), resumes AudioContext on start, passes tuning defaults +
+'/vad/' asset paths + startOnLoad:false, honors overrides, wires shared stream+context, onSpeechStart ->
+'speech', onSpeechEnd hands an audio/wav segment (durationMs correct) then returns to listening, barge-in
+fires ONLY while the face is speaking, misfire routes to onMisfire with NO segment (debounce), encode
+failure -> onError without throwing, pause/destroy + start()-after-destroy no-op, load failure -> 'error'
++ rejects, onStateChange emits loading->listening->speech->listening; plus the conversation spec (defaults
+push-to-talk, toggles to hands-free, restores across reload). `npm run typecheck` clean; `npm run build`
+compiles (prebuild populated public/vad/) and prerenders / and /_not-found (+ dynamic /api/chat,/api/config).
+No app-template dir yet, so no sync-template step. Flipped this task's passes -> true.
+UAT (headless_verifiable:false — needs a browser + real microphone + WebGPU/WASM): run `npm run dev`,
+switch input mode to hands-free, and confirm (1) speaking a sentence auto-STARTS then auto-ENDS a turn
+end-to-end (the Silero model + worklet + ORT wasm load from /vad/ under the COEP headers with no
+cross-origin block, self.crossOriginIsolated true); (2) speaking OVER the agent's TTS interrupts it
+(barge-in cancels TTS + the in-flight chat); (3) background noise below threshold / a brief click does
+NOT open a turn (misfire); (4) hands-free and push-to-talk are mutually exclusive (selecting one disables
+the other). Full end-to-end also depends on the STT/transcribe + orchestrator tasks landing.

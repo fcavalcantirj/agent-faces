@@ -15,6 +15,7 @@ import {
   type ConversationState,
   type ConversationStore,
   type ConversationTurn,
+  type InputMode,
 } from '@/lib/conversation'
 
 // Process-wide default store so the whole app shares one transcript without a
@@ -41,6 +42,8 @@ export interface UseConversation {
   setProvider(provider: string | null): void
   /** Select the model. */
   setModel(model: string | null): void
+  /** Choose push-to-talk vs hands-free VAD (mutually exclusive). */
+  setInputMode(mode: InputMode): void
   /** Set the persona / system prompt. */
   setSystem(system: string): void
   /** Clear the transcript (keeps provider/model + persona). */
@@ -81,6 +84,10 @@ export function useConversation(
     (model: string | null) => store.setModel(model),
     [store],
   )
+  const setInputMode = useCallback(
+    (mode: InputMode) => store.setInputMode(mode),
+    [store],
+  )
   const setSystem = useCallback((system: string) => store.setSystem(system), [store])
   const reset = useCallback(() => store.reset(), [store])
   const toMessages = useCallback(() => store.toMessages(), [store])
@@ -94,6 +101,7 @@ export function useConversation(
       finalizeAssistantTurn,
       setProvider,
       setModel,
+      setInputMode,
       setSystem,
       reset,
       toMessages,
@@ -106,6 +114,7 @@ export function useConversation(
       finalizeAssistantTurn,
       setProvider,
       setModel,
+      setInputMode,
       setSystem,
       reset,
       toMessages,

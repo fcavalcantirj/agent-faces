@@ -32,10 +32,22 @@ export interface ConversationTurn {
   createdAt: number
 }
 
+/**
+ * How the user talks to the face. The two modes are MUTUALLY EXCLUSIVE — the
+ * orchestrator runs push-to-talk (hold to record) OR hands-free VAD (Silero
+ * auto-detects speech), never both. Selected here so it survives a reload.
+ */
+export type InputMode = 'push-to-talk' | 'hands-free'
+
+/** Default input mode when none has been chosen/persisted. */
+export const DEFAULT_INPUT_MODE: InputMode = 'push-to-talk'
+
 /** Which brain is currently selected. `null` = not chosen yet. */
 export interface ConversationSettings {
   provider: string | null
   model: string | null
+  /** Push-to-talk vs hands-free VAD (mutually exclusive). */
+  inputMode: InputMode
 }
 
 /** The full, immutable store state. */
@@ -98,7 +110,9 @@ export interface ConversationStore {
   setProvider(provider: string | null): void
   /** Set the selected model. */
   setModel(model: string | null): void
-  /** Set provider + model together. */
+  /** Set the input mode (push-to-talk vs hands-free VAD). */
+  setInputMode(mode: InputMode): void
+  /** Set provider + model + input mode together. */
   setSettings(settings: Partial<ConversationSettings>): void
   /** Clear the transcript (keeps provider/model + persona) and persist the clear. */
   reset(): void
@@ -125,7 +139,14 @@ interface PersistedConversation {
 }
 
 function emptySettings(): ConversationSettings {
-  return { provider: null, model: null }
+  return { provider: null, model: null, inputMode: DEFAULT_INPUT_MODE }
+}
+
+/** Coerce a persisted value to a valid InputMode (defaulting missing/garbage). */
+function normalizeInputMode(value: unknown): InputMode {
+  return value === 'hands-free' || value === 'push-to-talk'
+    ? value
+    : DEFAULT_INPUT_MODE
 }
 
 /** Load + validate a persisted snapshot, or return null on any problem. */
@@ -163,6 +184,7 @@ function loadPersisted(
     provider:
       typeof blob.settings?.provider === 'string' ? blob.settings.provider : null,
     model: typeof blob.settings?.model === 'string' ? blob.settings.model : null,
+    inputMode: normalizeInputMode(blob.settings?.inputMode),
   }
   return {
     // Restored turns are never mid-stream.
@@ -303,6 +325,11 @@ export function createConversationStore(
     setModel(model) {
       if (model === state.settings.model) return
       commit(state.turns, { settings: { ...state.settings, model } })
+    },
+
+    setInputMode(mode) {
+      if (mode === state.settings.inputMode) return
+      commit(state.turns, { settings: { ...state.settings, inputMode: mode } })
     },
 
     setSettings(partial) {

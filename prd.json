@@ -346,7 +346,7 @@
       "Verify: hands-free, speaking a sentence auto-starts and auto-ends a turn end-to-end.",
       "Verify: speaking over the agent's TTS interrupts it (barge-in); background noise below threshold does not start a turn."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {

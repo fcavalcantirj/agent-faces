@@ -25,6 +25,9 @@ test-results/
 # ML model cache (browser Whisper / Kokoro downloads)
 public/models/
 
+# Self-hosted VAD assets — regenerated from node_modules by scripts/setup-vad-assets.mjs
+public/vad/
+
 # misc
 .DS_Store
 *.log

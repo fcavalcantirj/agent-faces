@@ -96,7 +96,18 @@ describe('conversation store', () => {
     expect(store.getState().settings).toEqual({
       provider: 'groq',
       model: 'llama-3.1-8b-instant',
+      inputMode: 'push-to-talk',
     })
+  })
+
+  it('defaults to push-to-talk and toggles the input mode (mutually exclusive)', () => {
+    const store = createConversationStore({ storage })
+    expect(store.getState().settings.inputMode).toBe('push-to-talk')
+    store.setInputMode('hands-free')
+    expect(store.getState().settings.inputMode).toBe('hands-free')
+    // A brand-new store over the SAME storage = a page reload → mode restored.
+    const reloaded = createConversationStore({ storage })
+    expect(reloaded.getState().settings.inputMode).toBe('hands-free')
   })
 
   it('persists to localStorage under a versioned key and restores on reload', () => {
@@ -116,6 +127,7 @@ describe('conversation store', () => {
     expect(reloaded.getState().settings).toEqual({
       provider: 'anthropic',
       model: 'claude-opus-4-8',
+      inputMode: 'push-to-talk',
     })
     expect(reloaded.toMessages()).toEqual([
       { role: 'user', content: 'remember me' },
