@@ -109,7 +109,7 @@ Deep dive: [`skill/agent-face/references/architecture.md`](skill/agent-face/refe
 
 ## Status
 
-This repo currently ships the **build plan** — [`prd.json`](prd.json), a 58-task requisites list (frontend, backend, skill, docs, infra) that drives building the app. Contributions welcome once scaffolding lands; see `CONTRIBUTING.md`.
+This repo currently ships the **build plan** — [`prd.json`](prd.json), a 58-task requisites list (frontend, backend, skill, docs, infra) that drives building the app. Contributions welcome once scaffolding lands; see [`CONTRIBUTING.md`](CONTRIBUTING.md) (and [`docs/development.md`](docs/development.md) for the repo layout).
 
 ## License
 

@@ -767,7 +767,7 @@
       "Verify: CONTRIBUTING.md references the sync-template parity requirement and the CI checks by name.",
       "Verify: relative links in CONTRIBUTING.md and docs/development.md resolve."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

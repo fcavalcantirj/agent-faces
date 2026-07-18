@@ -1670,3 +1670,27 @@ needed). Flipped this task's passes -> true.
 - Added a Deploy-section note: only the four Mode A keys are prompted (Mode B is wired post-deploy), and the repository-url must point at the final public GitHub repo once pushed (update on fork/rename).
 - Headless check: node URL parse asserts env query equals the four keys exactly (passes).
 UAT: a human must click the rendered button and confirm the Vercel clone page lists all four env prompts (needs a browser + Vercel session).
+
+2026-07-18: [docs] Write CONTRIBUTING.md and developer setup docs — DONE. Added
+CONTRIBUTING.md: local setup (Node 22 per .nvmrc, npm install, keyless-degradation note,
+server-side-only keys), a scripts table (app scripts dev/build/start/typecheck/lint/test/
+test:watch/test:skill + the five portable skill scripts scaffold/dev/check-env/deploy/
+sync-template, each with --help), the code-style bar (strict TS, TDD, ~500-line focus,
+SKILL.md ≤500 + name-rule, server-side secrets, reuse EIDOLON from reference/fugu-face/),
+the single-source-of-truth rule (root app is canonical; app changes must be re-synced into
+skill/agent-face/assets/app-template via `node skill/agent-face/scripts/sync-template.mjs`,
+--check parity fails CI on drift — never hand-edit the template), and the branch/PR workflow
+listing the CI checks BY NAME (typecheck, build, skill-lint, template parity, portability,
+test:skill) as required gates. Added docs/development.md: full annotated repo-layout tree and
+the explicit boundary between scaffolding work (skill/agent-face/, harness-agnostic node
+scripts, generated template) and app-internals work (repo-root app/, components/, lib/,
+public/, scripts/), how the template is generated not authored, and how to run/test the four
+skill scripts under a plain node runtime (each --help + npm run test:skill). Linked
+CONTRIBUTING.md (and docs/development.md) from the README Status section (upgraded the bare
+`CONTRIBUTING.md` text to a real relative link). Docs-only task, no app files touched, so no
+template re-sync needed (README/docs are not mirrored) — confirmed sync-template --check still
+reports parity (77 files in sync). Verify (both headless, both pass): CONTRIBUTING.md
+references the sync-template parity requirement AND all six CI checks by name (grep for
+sync-template/parity/typecheck/build/skill-lint/template parity/portability/test:skill all
+hit); every relative link in CONTRIBUTING.md and docs/development.md resolves to an existing
+path (checked programmatically — 7/7 OK, 0 broken). Flipped this task's passes -> true.
