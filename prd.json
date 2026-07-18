@@ -964,6 +964,7 @@
     "description": "Let a newly-configured brain recover without a full page reload",
     "steps": [
       "CONTEXT (found 2026-07-18 while building the no-keys degradation eval): the degradation task asks that enabling a brain restore the send flow WITHOUT a reload. It does not today, and that is a real gap rather than a test artifact: lib/use-capabilities.ts fetches /api/config exactly ONCE on mount (a useEffect keyed only on injected config/fetch), there is no polling and no exposed refresh(), and the no-brain banner itself instructs the user to '…then reload'. Deliberately NOT fixed while writing the eval, because changing app behaviour nobody asked for is out of scope for a test task — filed here so it is an explicit product decision.",
+      "DECIDED 2026-07-18 (Felipe): reload-to-recover is ACCEPTED. Setting a server key means redeploying or restarting anyway, so the user is already in a reload-shaped moment; polling every open tab forever to serve a once-per-deployment event is a bad trade. Closed by confirming the banner wording is accurate rather than by implementing hot-recovery. No app change.",
       "DECIDE FIRST (ask Felipe if unsure): is reload-to-recover acceptable UX? If yes, close this task by aligning the docs/banner wording and delete the 'without reload' expectation from the degradation task. If no, implement below.",
       "RED first: extend tests/e2e/degradation.spec.ts with a case that boots against a zero-key /api/config, then re-routes /api/config to report a configured brain, triggers the refresh path, and asserts the no-brain banner disappears and SEND works — all WITHOUT page.reload(). Confirm it FAILS.",
       "Implement a refresh seam on useCapabilities (e.g. a returned refresh() plus an optional focus/visibility-change revalidate), keeping the single-fetch-on-mount default so nothing starts polling the server on a timer.",
@@ -972,7 +973,7 @@
       "Verify: npm test green and npm run typecheck exits 0.",
       "Verify: the new degradation case passes without any page.reload() call in it."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

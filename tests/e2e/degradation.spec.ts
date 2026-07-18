@@ -97,6 +97,14 @@ test("explains the missing brain in actionable words and keeps typing available"
   // The typing path stays present — degradation, not a dead end.
   await expect(page.getByPlaceholder("…or type a message")).toBeVisible();
   await expect(page.getByRole("button", { name: "SEND" })).toBeVisible();
+
+  // Recovery is reload-based BY DECISION (Felipe, 2026-07-18): setting a server
+  // key means redeploying or restarting anyway, so the user is already in a
+  // reload-shaped moment, and polling every open tab forever to serve a
+  // once-per-deployment event is a bad trade. That makes this wording
+  // load-bearing — it is the ONLY thing telling the user how to recover. If
+  // someone ever adds hot-recovery, this assertion should fail and be removed.
+  await expect(body).toContainText("reload");
 });
 
 test("the particle face still animates with no keys", async ({ page }) => {

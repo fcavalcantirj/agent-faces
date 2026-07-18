@@ -2189,3 +2189,21 @@ UAT: #52 Eval: lip-sync fires on real audio — analyser volume is non-flat and 
 UAT: #54 Eval: no-keys graceful degradation path — zero-key boot has no console errors and an interactive face; STT/TTS fall back to fully-local engines.
 UAT: #56 Add GitHub Actions CI — the workflow passes on a clean checkout. introducing a claude-named SKILL.md name or an out-of-sync template makes CI fail as designed (manual check).
 UAT: #57 Verify the Deploy-with-Vercel clone end-to-end — the button-driven deploy builds and serves the app without manual config beyond env prompts. the no-keys deploy loads and degrades gracefully rather than erroring.
+
+2026-07-18: [frontend] Let a newly-configured brain recover without a full page reload — CLOSED
+BY DECISION, no app change.
+This task existed because the degradation eval's spec text asked for hot-recovery while the
+implementation deliberately does not do it. I filed it rather than silently coding around the
+gap, and its FIRST step was DECIDE, not implement.
+DECISION (Felipe, 2026-07-18): reload-to-recover is ACCEPTED. Rationale: setting a server key
+means redeploying or restarting the app anyway, so the user is already in a reload-shaped
+moment; and polling /api/config on every open tab forever, to serve an event that happens once
+per deployment, is a bad trade.
+CLOSED BY MAKING THE WORDING LOAD-BEARING INSTEAD OF ADDING CODE: since the banner text is now
+the ONLY thing telling a user how to recover, tests/e2e/degradation.spec.ts asserts the
+zero-key banner actually contains "reload" — alongside the existing assertions that it names
+ANTHROPIC_API_KEY and AGENT_BRIDGE_URL. The comment there records the decision and its date, and
+says explicitly that if anyone later adds hot-recovery this assertion SHOULD fail and be
+removed. A decision that only lives in a chat log is a decision that gets silently reversed.
+Verify (RUN): playwright degradation spec EXIT=0, 4 passed, including the new reload assertion.
+Flipped passes -> true.
