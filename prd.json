@@ -913,6 +913,24 @@
     "headless_verifiable": false
   },
   {
+    "category": "frontend",
+    "description": "Keep server-only provider SDKs out of the client bundle",
+    "steps": [
+      "CONTEXT (found 2026-07-18 while debugging the build): app/page.tsx is a 'use client' component and transitively imports the server-only provider chain — app/page.tsx -> lib/use-orchestrator.ts -> lib/orchestrator.ts -> lib/providers/index.ts -> lib/providers/anthropic.ts -> @anthropic-ai/sdk. This ships a ~151K client chunk containing the Anthropic SDK (anthropic-version / x-api-key / dangerouslyAllowBrowser strings appear in .next/static/chunks) to the browser, and makes `next build --webpack` fail outright with UnhandledSchemeError on node:path. No key material leaks today because Next only inlines NEXT_PUBLIC_*, but it violates the CLAUDE.md rule that provider SDKs and keys stay server-side.",
+      "RED first: add lib/providers/client-boundary.test.ts that statically walks the import graph reachable from lib/use-orchestrator.ts (read files, follow relative and @/ alias imports) and asserts no provider SDK is reachable — fail if '@anthropic-ai/sdk' or lib/providers/anthropic appears. Confirm this test FAILS before the fix.",
+      "Split the registry: keep lib/providers/index.ts server-only (it is what app/api/chat/route.ts uses) and move what the client legitimately needs — adapter ids, display names, capability flags, TypeScript types — into a client-safe module (e.g. lib/providers/catalog.ts) that imports NO SDK.",
+      "Repoint lib/orchestrator.ts, lib/use-orchestrator.ts and app/page.tsx at the client-safe module. The client learns about providers only via types plus the existing /api/config and /api/models routes; it must never construct an adapter.",
+      "Prefer the static import-graph assertion over adding a new 'server-only' dependency — the assertion is portable and needs no new package.",
+      "If any root app file changed, re-run: node skill/agent-face/scripts/sync-template.mjs",
+      "Verify: the new client-boundary test passes and npm test is fully green (no previously-passing test regresses).",
+      "Verify: npm run build exits 0 AND `grep -rlE 'anthropic-version|dangerouslyAllowBrowser' .next/static/chunks/` returns NO files.",
+      "Verify: npx next build --webpack completes without the 'Reading from \"node:path\" is not handled by plugins' UnhandledSchemeError.",
+      "Verify: npm run typecheck exits 0."
+    ],
+    "passes": false,
+    "headless_verifiable": true
+  },
+  {
     "category": "infra",
     "description": "Finalize the deliverable prd.json at repo root",
     "steps": [
