@@ -10,6 +10,7 @@
   --muted-foreground: #9a9aa8;
   --accent: #6ee7ff;
   --border: #23232e;
+  --card: #101018;
 }
 
 @theme inline {
@@ -19,6 +20,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-border: var(--border);
+  --color-card: var(--card);
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;

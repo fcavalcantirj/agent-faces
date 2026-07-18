@@ -37,3 +37,28 @@ maxDuration for app/api/{chat,transcribe,tts}/route.ts. Ran npm install (next 16
 19.2.7, tailwindcss 4.3.3); committing package-lock.json. Verify: `npm run typecheck` passes
 with no errors; `npm run build` compiles successfully and produces .next/ (routes / and
 /_not-found prerendered static). Flipped this task's passes -> true.
+
+2026-07-18: [frontend] Port the EIDOLON particle face component and neutralize branding — DONE.
+Copied the vendored EIDOLON source from reference/fugu-face/ (read-only) into the app:
+face-points.ts -> lib/face-points.ts (12-emotion particle-geometry engine: Emotion union,
+EMOTIONS, COUNTS head3000/eye420x2/mouth660/brow200x2, RANGES, EMOTION_META, buildTargets,
+TOTAL=4700 particles — copied verbatim, no branding present), utils.ts -> lib/utils.ts (cn()
+helper), agent-face.tsx -> components/agent-face.tsx (R3F Canvas + ParticleFace + Dust +
+OrbitControls — copied verbatim; the fake sine-wave mouthPulse ~line 85 is left for the
+lip-sync task to replace). Rewrote components/face-hud.tsx neutralizing the hardcoded
+'EIDOLON-01' / 'AGENT FACE INTERFACE // SPIKE v0.1' HUD label into a configurable `title`
+(default 'AGENT FACE') + `subtitle` (default 'VOICE FACE INTERFACE') prop; kept the 1-0/Q/W
+emotion keyboard shortcuts and all readouts. grep -riE 'hermes|eidolon|spike|fugu' over
+lib/ + components/ returns only 'ATTENTION SPIKE' (the alert emotion's status copy — a real
+word, not branding); no hermes/eidolon/fugu references remain. Added a --card (#101018) theme
+token to app/globals.css + @theme inline (the HUD's active-emotion button uses bg-card, which
+was undefined). Confirmed all 12 emotions enumerate: neutral, thinking, speaking, happy, alert,
+sad, angry, surprised, confused, sleepy, love, glitch. Temporarily mounted AgentFace(emotion=
+'neutral') + FaceHud in app/page.tsx as a demo (AgentFace loaded via next/dynamic ssr:false so
+the canvas/WebGL sprite code never runs during SSR) — this placeholder is replaced by the
+orchestrator task. Verify: `npm run typecheck` passes with no errors; `npm run build` compiles
+successfully and prerenders / and /_not-found. Flipped this task's passes -> true.
+UAT (headless_verifiable:false — needs a browser): run `npm run dev`, open http://localhost:3000,
+confirm the ~4,700-particle face renders with no console errors and that all 12 emotions cycle
+via keys 1-0/Q/W and the on-screen emotion buttons (morph transitions, blink, breathing, glitch
+static all animate).

@@ -49,7 +49,7 @@
       "Verify: npm run typecheck passes after the copy.",
       "Verify: temporarily mount AgentFace with emotion='neutral', run npm run dev, and confirm the particle face renders and all 12 emotions cycle via keys 1-0/Q/W with no console errors."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {
