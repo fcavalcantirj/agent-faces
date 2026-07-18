@@ -105,3 +105,23 @@ NEXT_PUBLIC token so the verify grep stays clean. Verify (both pass): `grep NEXT
 .env.example` returns nothing; .env.example lists all 18 Mode A + Mode B + transcription +
 deploy keys plus a degradation note; `npm run typecheck` still clean (no code touched).
 Flipped this task's passes -> true.
+
+2026-07-18: [frontend] 🚨 URGENT: Add cross-origin isolation headers so browser Whisper
+(transformers.js/WebGPU) can run — DONE. Added an async headers() to next.config.mjs that
+applies three LOAD-BEARING headers to ALL routes (source '/:path*'): Cross-Origin-Opener-Policy:
+same-origin and Cross-Origin-Embedder-Policy: credentialless (together enable
+self.crossOriginIsolated -> SharedArrayBuffer for the multi-threaded WASM/WebGPU Whisper
+backend), plus Permissions-Policy: microphone=(self) so getUserMedia for push-to-talk/VAD is not
+blocked. Chose COEP credentialless over require-corp deliberately: credentialless still yields
+crossOriginIsolated but lets cross-origin subresources that lack a Cross-Origin-Resource-Policy
+header (the Hugging Face CDN model download, CDN fonts, third-party assets) load credential-less
+instead of being hard-blocked — so no CORP retrofit or model self-hosting is forced yet (documented
+in a load-bearing comment as the escape hatch if a specific embed breaks). Replaced the prior
+placeholder comment that reserved this work. Verify (headless): `npm run typecheck` clean; `npm run
+build` compiles and still prerenders / and /_not-found; started `npx next start` and curled — all
+three headers are present on the document route (/) AND on a static asset (/icon.svg), confirming
+they apply site-wide. Flipped this task's passes -> true.
+UAT (headless_verifiable:false — needs a browser + WebGPU): open the app in Chrome/Edge and confirm
+in devtools that self.crossOriginIsolated === true on the app origin, that navigator.gpu resolves an
+adapter with no COEP error, and that the ~4,700-particle face still renders/animates with the new
+headers applied (no cross-origin resource blocked).

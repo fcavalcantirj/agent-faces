@@ -98,7 +98,7 @@
       "Verify: navigator.gpu resolves an adapter in Chrome/Edge without a COEP error.",
       "Verify: the particle face still renders with the new headers applied."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {
