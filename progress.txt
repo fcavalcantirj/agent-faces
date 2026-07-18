@@ -1340,3 +1340,42 @@ standalone: Next 16 compiled in 9.5s, TypeScript passed, all 6 routes generated
 drift: `sync-template.mjs --check` still reports "in sync (77 files)" (the new script
 lives under skill scripts, not the packaged template). Cleaned up the /tmp scaffolds.
 Flipped this task's passes -> true.
+
+2026-07-18: [skill] Write the dev-with-kill script that kills any previous server before
+starting — DONE. Added skill/agent-face/scripts/dev.mjs (Node ESM, zero deps, no
+harness-specific tooling). The HARD REQUIREMENT — always free the dev port BEFORE starting a
+new server — is the first thing main() does: freePort(port) runs `lsof -ti tcp:PORT` to find
+every process holding the port (excluding our own pid), SIGTERMs them, polls waitForPortClear
+(150ms cadence, 2.5s budget) and, for any survivor, escalates to SIGKILL and polls again;
+if it still can't clear the port it exits 1 with guidance. Port-freeing is deliberately
+PORT-SCOPED rather than a broad `pkill next dev` (which would nuke unrelated projects' dev
+servers on the same machine) — documented in a header comment. Only after the port is
+confirmed free does it spawn `npm run dev -- -p PORT` in the resolved app dir: resolveAppDir()
+uses the current dir when it holds a package.json (the scaffolded-app case), else the packaged
+assets/app-template resolved RELATIVE TO THIS SCRIPT (so it works when the skill is extracted
+standalone). stdio is inherited so child output streams live; SIGINT/SIGTERM are forwarded to
+the child so Ctrl-C stops it cleanly, and the parent exits with the child's code. Once the
+server accepts a TCP connection (waitForServer polls net.connect to 127.0.0.1:PORT, 60s
+budget) it opens the browser — browserOpenArgv picks `open` (macOS) / `cmd /c start` (Windows)
+/ `xdg-open` (Linux) — skipped when isHeadless() (CI set, or Linux with no DISPLAY/WAYLAND) or
+--no-open. Flags: --port/-p (default 3000), --no-open, --kill-only (free the port and exit,
+without starting — a genuine convenience that also makes the load-bearing kill path headlessly
+testable), --help/-h. main() runs only when the file is invoked directly (import.meta.url vs
+argv[1] guard) so tests can import helpers. TDD: wrote skill/agent-face/scripts/dev.test.ts
+(5 specs) — --help exits 0 and mentions the kill step; an unknown option and an invalid --port
+each exit 2; and the load-bearing proof: spawn a decoy listener in a SEPARATE process, confirm
+it owns the port, run `dev.mjs --kill-only --port PORT`, assert exit 0, the port is left with
+ZERO owners, and stderr says "freed port"; plus --kill-only on an already-free port exits 0.
+Verify (all headless, all pass): `npx vitest run skill/agent-face/scripts/dev.test.ts` 5/5
+green; `npm run typecheck` clean; full `npm test` 383/383 green; `node dev.mjs --help` exits 0;
+`node skill/agent-face/scripts/sync-template.mjs --check` still reports parity (77 files — the
+skill script is not part of the synced app template). Additionally demonstrated over REAL
+processes: started a decoy `net.createServer().listen(3007)`, ran dev.mjs --kill-only twice —
+run 1 reported "held by PID … stopping them first / Freed port 3007" and lsof went 1 -> 0
+owners, run 2 reported "already free" (the twice-in-a-row verify's kill half, proven without a
+browser). Flipped this task's passes -> true.
+UAT (headless_verifiable:false — needs a browser + a real `next dev`): run `node
+skill/agent-face/scripts/dev.mjs` in a scaffolded app twice in a row and confirm `lsof -ti
+tcp:3000 | wc -l` returns 1 (the new server; the prior one was killed) and that the browser
+opens to http://localhost:3000 with the particle face rendering; run with --no-open and confirm
+the browser is NOT opened but the server still starts.

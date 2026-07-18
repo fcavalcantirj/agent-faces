@@ -595,7 +595,7 @@
       "Verify: run the script twice in a row; only one process listens on the port (lsof -ti tcp:3000 | wc -l returns 1).",
       "Verify: the browser opens to the running app (or is skipped with --no-open) and the face renders."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {
