@@ -1613,3 +1613,36 @@ voice.md (OPENAI_API_KEY, GROQ_API_KEY, OPENAI_TRANSCRIBE_MODEL/LANGUAGE/PROMPT)
 exists verbatim in .env.example, and no stray/invented env var appears (the only
 NEXT_PUBLIC mention is the deliberate "never do this" negative example). Flipped
 this task's passes -> true.
+
+2026-07-18: [docs] Write references/deploy.md and references/troubleshooting.md — DONE.
+deploy.md already shipped with the self-host-artifacts task (covers both targets — Vercel
+button + `deploy.mjs --target vercel --prod`, and self-host Docker/compose on a VPS — env
+setup, and Mode B reachability: private network vs an HTTPS tunnel/ALLOW_AGENT_BRIDGE_IN_PROD
+from Vercel); confirmed it still satisfies this task's Verify (10 Vercel/self-host mentions,
+no removed Hermes-only variable referenced), so left it unchanged. Wrote
+skill/agent-face/references/troubleshooting.md as symptom→cause→concrete-check, leading with
+`check-env.mjs` as the fastest triage. Six required failure categories, each with a runnable
+check: (1) browser cannot record — HTTPS/MediaRecorder, check `window.isSecureContext` +
+`navigator.mediaDevices` (http on a non-localhost host withholds the mic); (2) transcription
+fails — in-browser Whisper isolation, hosted-fallback keys (Groq whisper-large-v3-turbo /
+OpenAI whisper-1|gpt-4o-transcribe via check-env STT row), clip too large vs the ~4.5MB
+serverless body cap, bad OPENAI_TRANSCRIBE_MODEL; (3) chat brain fails — curl /api/config +
+check-env, mapping each AdapterError code (unavailable/unauthorized/rate_limited/network-"agent
+offline"), incl. `check-env --probe` and the Vercel private-URL-hidden rule
+(ALLOW_AGENT_BRIDGE_IN_PROD / public tunnel); (4) face does not change emotion — the exact
+[[face:<emotion>]] directive form is stripped-before-TTS and an invalid word (e.g.
+[[face:banana]]) is silently ignored, with the 12-emotion vocabulary listed and the
+malformed-single-bracket-spoken-aloud case; (5) dev server port in use — always start via
+`dev.mjs` (frees the port SIGTERM→SIGKILL, port-scoped), with `lsof -ti tcp:3000` as the
+manual check; (6) cross-origin not isolated — `self.crossOriginIsolated` + a curl for the
+COOP/COEP headers set in next.config.mjs, proxy-stripping and credentialless escape-hatch
+notes. Added the required "Nothing configured" entry quoting the real degradation copy (the
+NO BRAIN banner from lib/capabilities.ts, the settings hint, and the STT/TTS
+"add a key or use browser" messages) and framing it as graceful degradation, not an error;
+and a portability entry showing the scripts run under any non-Claude harness by path (plain
+`node scripts/*.mjs`, Node 22+/npm, lsof macOS/Linux). Cross-links (deploy.md, backends.md,
+portability.md, ../../../docs/env-contract.md) all resolve. Verify (both headless, both pass):
+troubleshooting.md has all six `## N.` category headings each with a concrete check (16
+check/curl/lsof/devtools markers); deploy.md commands cover both targets and reference no
+removed Hermes-only variable. Docs-only task — no code touched, no test/sync-template needed.
+Flipped this task's passes -> true.

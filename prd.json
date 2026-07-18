@@ -718,7 +718,7 @@
       "Verify: troubleshooting.md includes the six failure categories, each with a concrete check.",
       "Verify: deploy.md commands cover both targets and reference no removed Hermes-only variable."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
