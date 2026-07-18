@@ -978,6 +978,40 @@
   },
   {
     "category": "infra",
+    "description": "🚨 URGENT: Make npm run lint actually work (ESLint 9 flat config)",
+    "steps": [
+      "CONTEXT (found 2026-07-18 during final verification, by running a gate nobody had run): `npm run lint` has NEVER worked. On a fresh clone it exits 2 with 'ESLint couldn't find an eslint.config.(js|mjs|cjs) file'. package.json defines \"lint\": \"eslint .\" and devDepends on eslint ^9 + eslint-config-next ^16, but NO flat config file exists in the repo. So zero linting has run across all 62 completed tasks. The CI workflow did not include a lint step either, so CI would not have caught it.",
+      "Create eslint.config.mjs using the ESLint 9 FLAT config format (not .eslintrc). Compose eslint-config-next via FlatCompat if the shipped config is still eslintrc-format, per the Next.js docs for ESLint 9.",
+      "Ignore build and vendored output: .next/, node_modules/, out/, build/, coverage/, reference/ (vendored EIDOLON source — never modify), and skill/agent-face/assets/app-template/ (a generated mirror; linting it duplicates every root violation).",
+      "Run `npm run lint` and fix REAL violations in first-party code. Do NOT blanket-disable rules to force a pass — if a rule is genuinely wrong for this codebase, disable it explicitly in the config with a comment saying why.",
+      "Add a lint step to .github/workflows/ci.yml in the build job so this can never silently rot again.",
+      "If any root app file changed, re-run: node skill/agent-face/scripts/sync-template.mjs",
+      "Verify: `npm run lint` EXITS 0 on a fresh clone (capture $? directly, never a pipeline tail).",
+      "Verify: introducing a deliberate violation (e.g. an unused variable) makes `npm run lint` exit non-zero, proving the gate can fail."
+    ],
+    "passes": false,
+    "headless_verifiable": true
+  },
+  {
+    "category": "infra",
+    "description": "Measure and report real test coverage against the 80% floor",
+    "steps": [
+      "CONTEXT (found 2026-07-18 during final verification): coverage has NEVER been measured. `npx vitest run --coverage` fails with 'Cannot find dependency @vitest/coverage-v8' — the provider is not installed. The project's stated floor is 80%, so that floor has gone unchecked across all 62 tasks. 448 passing tests says nothing about how much code they actually touch.",
+      "Add @vitest/coverage-v8 as a devDependency and configure coverage in vitest.config.ts (provider v8, text + html reporters).",
+      "Exclude from coverage what should not count: node_modules, .next, reference/ (vendored), skill/agent-face/assets/app-template/ (generated mirror), tests/ itself, and config files.",
+      "Add an npm script `test:coverage` running vitest with --coverage.",
+      "RUN IT AND REPORT THE REAL NUMBER HONESTLY, whatever it is. Do not tune thresholds to match the result — that inverts the purpose of a floor.",
+      "If coverage is BELOW 80%, do NOT silently accept it: record the actual figure in progress.txt, identify the least-covered modules, and either raise coverage with real tests or file a follow-up task. State plainly which was done.",
+      "Only set a `thresholds` gate in vitest.config.ts once the real number is known, and set it at the honest current level or the 80% target — say which and why.",
+      "Add a coverage step to .github/workflows/ci.yml.",
+      "Verify: `npm run test:coverage` exits 0 and prints a summary table with a real percentage.",
+      "Verify: the reported percentage is recorded verbatim in progress.txt."
+    ],
+    "passes": false,
+    "headless_verifiable": true
+  },
+  {
+    "category": "infra",
     "description": "Finalize the deliverable prd.json at repo root",
     "steps": [
       "PREREQUISITE: DEPENDS ON all prior tasks (this file is the project deliverable).",
@@ -990,7 +1024,7 @@
       "Verify: node parses prd.json as an array and every element has exactly the five required keys (category, description, steps, passes, headless_verifiable) with a valid category.",
       "Verify: no task has an invalid category and every task has at least one Verify: step."
     ],
-    "passes": true,
+    "passes": false,
     "headless_verifiable": true
   }
 ]
