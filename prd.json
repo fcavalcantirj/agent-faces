@@ -735,7 +735,7 @@
       "Verify: README renders with no broken relative links.",
       "Verify: a grep for 'quick start', 'deploy', 'skill', and 'brain' confirms all major sections are present."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

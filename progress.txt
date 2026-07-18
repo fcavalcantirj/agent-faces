@@ -1646,3 +1646,21 @@ troubleshooting.md has all six `## N.` category headings each with a concrete ch
 check/curl/lsof/devtools markers); deploy.md commands cover both targets and reference no
 removed Hermes-only variable. Docs-only task — no code touched, no test/sync-template needed.
 Flipped this task's passes -> true.
+
+=== 2026-07-18 — Write the human-facing README ===
+Audited root README.md against the task spec; it already satisfies every step and both
+Verify checks, so no rewrite was needed. Confirmed the required structure: outcomes-first
+opening ("Give your agent a face. Talk to it out loud, hear it answer, watch an animated
+face lip-sync") with the hero.png placeholder; the north-star line ("install the skill on
+an agent -> boom, it has a face"); Quick start (git clone, npm install, cp .env.example
+.env.local, npm run dev, open localhost, press talk); Two brains (Mode A Anthropic/
+OpenRouter/Groq vs Mode B agent-bridge to Hermes/openclaw/Claude Code/Ollama) with the
+brains table; Deploy section (Vercel button + self-host note) linking references/deploy.md;
+Install-the-skill section naming Claude Code/Hermes/openclaw/trustclaw/nanoclaw with the
+scaffold/dev/check-env/deploy script table; the optional env-var table; and the
+screenshots section (talking.png). Verify 1 (no broken relative links): all 8 relative
+markdown links resolve (.env.example, prd.json, the four references/*.md, both
+public/screenshots PNGs) and both inline images resolve; the CONTRIBUTING.md mention is
+backticked prose, not a link. Verify 2 (grep major sections): quick start=1, deploy=8,
+skill=13, brain=10 — all present. Docs-only task, no code touched (no test/sync-template
+needed). Flipped this task's passes -> true.
