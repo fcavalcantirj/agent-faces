@@ -14,7 +14,7 @@
       "Verify: ls shows app/ components/ lib/ public/ skill/ docs/ .github/ and prd.json, LICENSE, .gitignore present.",
       "Verify: git status runs cleanly and node -e require('fs').readFileSync('prd.json') parses prd.json as a valid JSON array."
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "frontend",

@@ -6,3 +6,16 @@
 2026-07-18: Harness bootstrapped. Repo initialized; prd.json (58 tasks) + README + Ralph
 harness (ralph.sh, ralph-continuous.sh, progress.sh, CLAUDE.md) in place. No app code yet.
 Next undone task: the first prd.json task with passes=false (top of the array).
+
+2026-07-17: [infra] Initialize claude-faces repo and top-level folder layout — DONE.
+Repo was already git-init'd on branch main (Node v22.22.3). Created the top-level directory
+skeleton: app/, components/, lib/, public/, docs/, skill/agent-face/{references,scripts,assets},
+.github/workflows/ (empty dirs carry .gitkeep so git tracks them). Verified the existing
+.gitignore already covers node_modules, .next/, out/, .env, .env*.local, .vercel/, coverage/,
+public/models/, .DS_Store, *.tsbuildinfo — left unchanged. Added LICENSE (MIT, 2026, Felipe
+Cavalcanti), .nvmrc (Node 22), .editorconfig (2-space/LF/final-newline), and docs/decisions.md
+recording npm as the canonical package manager (+ Node 22 pin) with rationale. Deliberately did
+NOT overwrite the existing prd.json or README.md with placeholders — the "placeholder prd.json ([])"
+step was a bootstrap artifact; the 58-task ledger and full README already exist. Verify: all
+required dirs/files present; git status clean; node -e parses prd.json as a 58-element JSON array.
+Flipped this task's passes -> true.
