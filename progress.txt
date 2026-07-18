@@ -183,3 +183,46 @@ time with the estimated envelope (not a fixed sine); switch to another emotion a
 settles back to that emotion's static shape within one morph interval; check Chrome devtools
 Performance that the particle loop holds ~60fps while the mouth animates. Full analyser-driven
 lip-sync from a real TTS clip is validated once the TTS router / orchestrator tasks land.
+
+2026-07-18: [frontend] Introduce a face-skin abstraction so EIDOLON and a TalkingHead/RPM
+skin are swappable — DONE. Added the ONE seam every face renderer implements so the (future)
+orchestrator drives emotion/mouth/viseme identically across renderers. lib/face/skin.ts defines
+the imperative interface FaceSkin { id; setEmotion; setSpeaking; setMouth(open,viseme?);
+setViseme(scores); mount(container); dispose() } (imperative mount/dispose so it wraps BOTH our
+React/R3F renderer via a mounted root AND an imperative lib like TalkingHead.js behind one shape),
+plus FaceSkinId ('eidolon'|'talkinghead'), DEFAULT_SKIN_ID='eidolon', createInitialState(),
+EMOTION_TO_TALKINGHEAD_MOOD (all 12 emotions -> TalkingHead's mood vocabulary), and the pure
+resolveSkinId(requested,{talkingHeadAvailable,warn}) that degrades talkinghead->eidolon (and any
+unknown id->eidolon) with a console.warn instead of crashing. lib/face/visemes.ts is the shared
+viseme vocabulary (the 15 Oculus visemes wawa-lipsync emits) with dominantViseme() (argmax, silence
+on empty/all-zero/non-finite), isViseme, emptyVisemeScores, and visemeScoresToBlendshapes(scores,
+'oculus'|'arkit') — oculus is identity (RPM ships viseme_* morph targets), arkit is a coarse
+jawOpen/mouthPucker/... recipe per viseme — so wawa output maps consistently onto either skin.
+components/skins/eidolon-skin.tsx wraps the existing R3F particle face behind FaceSkin: the
+controller is framework-light (setEmotion/setSpeaking notify a bound view; setMouth clamps 0..1 into
+a ref; setViseme resolves the dominant viseme into the ref — all ref-based, no re-render) and mount()
+lazily dynamic-imports react-dom/client + the R3F view (components/skins/eidolon-skin-view.tsx) so the
+Three.js stack only loads when actually mounted. components/skins/talkinghead-skin.tsx is the sanctioned
+stretch STUB: it carries the REAL mappings (Emotion->mood, viseme scores->ARKit/Oculus blendshapes via
+setViseme/getBlendshapes) but does not bundle TalkingHead.js or a GLB in the MVP; mount() detects the
+missing library/model, console.warns, and calls onUnavailable (never throws) so the host falls back;
+isTalkingHeadAvailable(env) gates on NEXT_PUBLIC_TALKINGHEAD_MODEL_URL (a non-secret asset URL). Deliberately
+did NOT attempt a real import('@met4citizen/talkinghead') — that would break typecheck/build — the real
+integration point is documented in a header comment. components/face-skin.tsx (FaceSkinHost) is the single
+selector: picks a skin by id from settings (default eidolon), runs resolveSkinId (probing
+isTalkingHeadAvailable), mounts the chosen controller into a container div, and hands the mounted FaceSkin
+to onReady so the orchestrator drives it through the interface — swapping skins never touches orchestrator
+code. Also set up the vitest "@/*" alias (resolve.alias in vitest.config.ts) — first test to need app-style
+imports. TDD: wrote lib/face/visemes.test.ts, lib/face/skin.test.ts, and components/skins/skins.test.ts
+first. Verify (all headless, all pass): `npm test` 42/42 green incl. new specs — dominantViseme argmax +
+silence fallbacks, oculus-identity/arkit blendshape mapping + clamping, all 12 emotions map to a valid
+TalkingHead mood, resolveSkinId keeps talkinghead only when available and otherwise degrades to eidolon
+with a warning (and unknown ids too), EIDOLON controller clamps setMouth/resolves setViseme ref-based and
+implements the full interface, TalkingHead stub mount warns+onUnavailable without throwing and computes
+non-empty blendshapes; `npm run typecheck` clean; `npm run build` compiles and prerenders / and /_not-found.
+Flipped this task's passes -> true.
+UAT (headless_verifiable:true, but browser-only visuals deferred): the swap+fallback LOGIC is fully
+headlessly verified; a human can additionally confirm in a browser that mounting FaceSkinHost skinId='eidolon'
+renders the particle face, and that skinId='talkinghead' (no model) visibly falls back to EIDOLON with the
+documented console warning and no crash. Full TalkingHead avatar rendering lands only if the stretch skin is
+later bundled with a Ready Player Me GLB.

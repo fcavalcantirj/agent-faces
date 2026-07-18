@@ -148,7 +148,7 @@
       "Verify: switching skin id in settings swaps EIDOLON and the TalkingHead stub without touching orchestrator code.",
       "Verify: selecting the talkinghead skin without the model present degrades to EIDOLON with a console warning, not a crash."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
