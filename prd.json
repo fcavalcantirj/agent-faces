@@ -299,7 +299,7 @@
       "Verify: calling streamChat renders tokens progressively in the transcript panel.",
       "Verify: the first sentence is dispatched to TTS before the stream completes; aborting stops token accumulation and any queued TTS."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

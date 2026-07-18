@@ -527,3 +527,43 @@ removing a key flips the boolean back off; and a body containing fake sk-/gsk- s
 to a fake secret: GET /api/config returned groq available with its default model, stt.groq:true,
 defaultProvider "groq", the Cache-Control header present, and ZERO 'gsk-' occurrences in the body.
 Flipped this task's passes -> true.
+
+2026-07-18: [frontend] Build the streaming chat client that consumes /api/chat and drives
+thinking/speaking — DONE. Added lib/chat/client.ts — the ONE browser seam the UI calls to talk
+to a brain, in two layers. (1) `streamChat(opts)` is a pure async generator: it POSTs { provider,
+model, messages, system, temperature } to /api/chat, parses the route's SSE frames
+(`data: {json StreamEvent}\n\n`) via the SHARED lib/providers/sse.ts parseSSEStream (browser-safe:
+ReadableStream + TextDecoder + eventsource-parser), JSON.parses each frame into a StreamEvent, and
+yields each {type:'delta'}.text string, RETURNING { reason } from the terminal {type:'done'}. A
+{type:'error'} frame throws a typed AdapterError rebuilt from the wire shape; a non-ok pre-stream
+response (the route's JSON { error } body) is parsed by errorFromResponse into an AdapterError
+(falling back to errorForStatus); a thrown fetch normalizes via normalizeError (abort/network).
+fetchImpl is injectable so it's headlessly testable with a fake fetch returning a ReadableStream of
+SSE frames — no network/browser. (2) `runChat(opts, callbacks)` is the orchestrator driver layering
+the conversation lifecycle: fires onStart (→ emotion 'thinking') before the request, onFirstToken
+(→ begin the 'speaking' TTS handoff) on the first delta, onToken(delta, accumulatedRaw) for
+progressive transcript render, and — crucially — buffers deltas into SENTENCE-sized chunks
+(splitSentences: boundary = a run of .!?/closing-quotes FOLLOWED BY whitespace, or a newline; a
+terminator at the very end of the buffer stays in `rest` so a mid-stream decimal "3." isn't
+mis-split) and hands each COMPLETE sentence to onSentence the moment it closes, so TTS starts before
+the reply finishes. Every sentence AND the final buffered tail pass through the emotion machine's
+parseFaceDirective so a [[face:x]] directive is STRIPPED before it reaches TTS (never spoken);
+onDone returns a ChatResult whose spoken `text` + resting `emotion` come from
+restingEmotionForReply(raw) (last directive wins, else keyword sentiment). Barge-in: runChat owns an
+AbortController (exposed as session.controller + session.abort(), and also forwards an optional
+external opts.signal) — aborting cuts the fetch, stops token accumulation (the loop checks
+signal.aborted before accumulating and before flushing each sentence), and does NOT flush the queued
+tail to TTS; the turn settles { aborted:true } WITHOUT firing onError (a barge-in is not an error).
+A real mid-stream error fires onError(AdapterError) (→ 'glitch') and settles { error }. The `done`
+promise always resolves (never rejects) with the ChatResult. TDD: wrote lib/chat/client.test.ts
+FIRST (RED) then implemented (GREEN). Verify (all headless, all pass): `npm test` 155/155 green incl.
+10 new client specs — streamChat yields deltas progressively then returns the done reason; an in-stream
+error event throws a typed rate_limited/502 AdapterError; a non-ok JSON response throws unknown_provider;
+runChat dispatches 'Hello there.'/'How are you today?'/'I am fine.' to TTS incrementally with the
+trailing [[face:happy]] stripped, the FIRST sentence reaching TTS BEFORE 'done' (log-order assertion),
+onDone emotion 'happy' + directive-free spoken text; barge-in after the first sentence leaves
+sentences==['One.'], raw=='One. Two' (gated later deltas never accumulated), aborted:true, onError
+never fired; a mid-stream error surfaces onError with a real AdapterError and aborted:false; an external
+AbortController signal also cancels; plus 3 splitSentences unit specs. `npm run typecheck` clean;
+`npm run build` compiles and prerenders / and /_not-found (+ dynamic /api/chat, /api/config). No
+app-template yet, so no sync-template step. Flipped this task's passes -> true.
