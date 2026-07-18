@@ -1306,3 +1306,37 @@ passed, all routes generated (/, /_not-found, /api/{chat,config,models,transcrib
 and .next/standalone/server.js was produced (output:'standalone'). Also confirmed no
 regression: root `npm run typecheck` clean and `npm test` 378/378 green across 32
 files (unchanged — template carries no tests). Flipped this task's passes -> true.
+
+2026-07-18: [skill] Write the portable scaffold script — DONE. Added
+skill/agent-face/scripts/scaffold.mjs — the FIRST script a host agent runs to give
+itself a face: it materializes the packaged self-contained web app (assets/app-template/,
+the 77-file synced snapshot) into a target working directory the user then installs,
+runs, and deploys. Plain Node ESM, ZERO external deps, only node:fs/node:path/
+node:child_process (no bash-only `cp` semantics) so any harness on any OS can invoke it
+with plain `node`. Target dir is the first positional arg (default ./agent-face-app);
+options are --force, --install, --help/-h (an unknown -flag prints help + exits 2). The
+template path is resolved RELATIVE TO THE SCRIPT (dirname(fileURLToPath(import.meta.url))
+-> ../assets/app-template) so scaffolding works when the skill is extracted standalone
+into any harness's skills dir, not just from the repo root; a missing template dir exits
+1 with a clear "skill package incomplete" message. SAFETY: refuses to overwrite a
+NON-EMPTY target (ignoring .git/.DS_Store when judging emptiness) unless --force is
+passed, exiting 1 with guidance — an empty or absent dir proceeds. Copy is cross-platform
+cpSync(recursive, force) with a filter that drops node_modules/.next/.vercel/coverage
+even if a local build left them in the template. After copying it prints the exact next
+steps (cp .env.example .env.local; npm install unless --install already ran; node
+<skill>/scripts/dev.mjs — or npm run dev — at http://localhost:3000) and the zero-keys
+degradation note. --install runs `npm install` in the target via spawnSync(stdio:inherit,
+shell only on win32) and propagates a non-zero install exit. Kept harness-neutral: grep
+of anthropic|claude|mcp|allowed-tools|tool_use over the script is clean (the later
+portability-audit task greps for exactly these). Verify (all headless, all pass):
+`node scaffold.mjs --help` prints usage; `node scaffold.mjs /tmp/af-test` created the app
+files (package.json, app/, components/, lib/, next.config.mjs, vercel.json, .env.example,
+scripts/, Dockerfile, README.md, …) with NO node_modules/.next copied; re-running WITHOUT
+--force on the populated target exited 1 with "Refusing to overwrite"; re-running WITH
+--force exited 0; scaffolding into a pre-created empty dir exited 0; and — the load-bearing
+check — `cd /tmp/af-test && npm install` (553 pkgs) then `npm run build` SUCCEEDED
+standalone: Next 16 compiled in 9.5s, TypeScript passed, all 6 routes generated
+(/, /_not-found, /api/{chat,config,models,transcribe,tts}). Also confirmed no template
+drift: `sync-template.mjs --check` still reports "in sync (77 files)" (the new script
+lives under skill scripts, not the packaged template). Cleaned up the /tmp scaffolds.
+Flipped this task's passes -> true.

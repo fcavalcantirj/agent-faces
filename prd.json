@@ -579,7 +579,7 @@
       "Verify: node skill/agent-face/scripts/scaffold.mjs /tmp/af-test creates the app files in the target.",
       "Verify: re-running without --force on a populated target exits non-zero with a clear message; cd /tmp/af-test && npm run build succeeds after install."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
