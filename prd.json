@@ -314,7 +314,7 @@
       "Verify: sending messages accumulates a coherent multi-turn history passed to /api/chat.",
       "Verify: reloading restores prior turns and the selected provider/model; reset clears history and returns the face to neutral."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

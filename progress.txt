@@ -567,3 +567,45 @@ never fired; a mid-stream error surfaces onError with a real AdapterError and ab
 AbortController signal also cancels; plus 3 splitSentences unit specs. `npm run typecheck` clean;
 `npm run build` compiles and prerenders / and /_not-found (+ dynamic /api/chat, /api/config). No
 app-template yet, so no sync-template step. Flipped this task's passes -> true.
+
+2026-07-18: [frontend] Add the conversation state store, system prompt, and persona — DONE.
+Added lib/persona.ts — the default FACE persona system prompt: vendor-NEUTRAL (no Hermes/Claude/
+OpenAI wording), spoken-first (concise 1-3 sentences, no markdown/lists/code-fences/emoji/URLs
+since every reply is read aloud + lip-synced), and emotion-aware (teaches the exact
+[[face:<emotion>]] directive form and lists all 12 EMOTIONS from lib/face-points so the model has
+the full vocabulary; the directive is stripped before TTS by the emotion machine). Exports
+DEFAULT_PERSONA_PROMPT, PERSONA_EMOTION_LIST, and buildSystemPrompt({base?,extra?}) for
+project/user-specific guidance. Added lib/conversation.ts — a tiny framework-free observable store
+(same idiom as createEmotionStore) that is the single source of truth for the transcript + selected
+brain + active persona. State {turns, settings{provider,model}, system} is IMMUTABLE (getState
+returns a stable ref until a mutation, so useSyncExternalStore is safe). Exposes the exact mutations
+the chat client drives: addUserTurn(text); appendAssistantDelta(delta) (appends to the current
+pending assistant turn, or opens one — pending turns are EXCLUDED from history so an in-flight reply
+is never resent); finalizeAssistantTurn(finalText?) (marks the streaming turn non-pending, optionally
+replacing its content with the directive-stripped SPOKEN text so persisted history matches what was
+said); setProvider/setModel/setSettings/setSystem; reset() (clears turns, KEEPS provider/model +
+persona, and persists the clear); and toMessages() which builds the /api/chat messages array
+(user/assistant only, finalized only). Persists a VERSIONED snapshot to localStorage under
+CONVERSATION_STORAGE_KEY='agent-face:conversation:v1' (version 1) on every mutation so a refresh
+restores turns + settings; loadPersisted validates the version + shape and IGNORES a corrupt or
+version-mismatched blob (never throws), degrades to no-persistence when window.localStorage is
+absent/blocked (SSR, privacy mode), and restored turns are forced non-pending. capTurns trims the
+OLDEST turns until total content <= MAX_HISTORY_CHARS (600k chars ~= 1.8 MB worst-case UTF-8, well
+under the ~4.5 MB /api/chat body cap) AND count <= MAX_TURNS (100), always keeping >=1 turn. Also
+added lib/use-conversation.ts — a 'use client' React hook (useConversation) over a module-level
+singleton store (getConversationStore), same pattern as useEmotion, exposing state/turns + stable
+action callbacks + toMessages for the future orchestrator UI. Injectable storage/now/idFactory make
+the whole store deterministic + headlessly testable. TDD: wrote lib/conversation.test.ts and
+lib/persona.test.ts FIRST (RED) then implemented (GREEN). Verify (all headless, all pass): `npm test`
+170/170 green incl. 15 new specs — a two-round user/assistant flow accumulates the exact 4-message
+multi-turn history for /api/chat (Verify #6); a pending assistant turn is excluded until finalized;
+finalize can replace accumulated text with the spoken text; provider/model tracked; a NEW store over
+the SAME injected storage (= a page reload) restores turns + provider/model, and after reset() stays
+empty while keeping the provider (Verify #7); corrupt + version-0 blobs are ignored without throwing;
+60x(50k-char user + 50k-char assistant) turns cap total content <= MAX_HISTORY_CHARS with the most
+recent surviving; subscribe fires once per mutation with a stable snapshot between mutations and stops
+after unsubscribe; a stray delta after finalize opens a fresh assistant turn; plus persona specs
+(non-empty/concise/[[face:<emotion>]]/all-12-emotions, vendor-neutral, buildSystemPrompt base+extra).
+`npm run typecheck` clean; `npm run build` compiles and prerenders / and /_not-found (+ dynamic
+/api/chat, /api/config). No app-template dir yet, so no sync-template step. Flipped this task's
+passes -> true.
