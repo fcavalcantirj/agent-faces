@@ -40,7 +40,13 @@ import type {
 import type { TtsEngine } from '@/lib/tts'
 import type { FaceSkin } from '@/lib/face/skin'
 import type { MouthState } from '@/components/agent-face'
-import { AdapterError } from '@/lib/providers'
+// Import from `providers/types` — NOT the `providers` barrel. The barrel is the
+// server-side registry: importing it as a VALUE executes its "Built-in adapters"
+// block, which registers every adapter and drags @anthropic-ai/sdk into whatever
+// bundle reaches it. This module is reachable from app/page.tsx ('use client'),
+// so that would ship the SDK to the browser. types.ts has zero imports.
+// Enforced by tests/client-boundary.test.ts.
+import { AdapterError } from '@/lib/providers/types'
 
 /** The TTS surface the orchestrator drives (satisfied by `TtsRouter`). */
 export interface OrchestratorTts {

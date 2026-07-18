@@ -2076,3 +2076,34 @@ the second occurrence, after acc14ca did the same via package.json, and after an
 warning). Synced (77 files, 1 updated), parity EXIT=0. Not a judgement on the fix, which is
 correct and well-commented — it is exactly the class of miss the CI parity gate exists to make
 impossible, which is a good argument for unblocking Actions.
+
+2026-07-18: [frontend] Keep server-only provider SDKs out of the client bundle — DONE.
+RED FIRST: tests/client-boundary.test.ts walks the REAL import graph from the client
+entrypoints (app/page.tsx, lib/use-orchestrator.ts, lib/orchestrator.ts) and fails if any
+provider SDK is reachable. Type-only imports are correctly ignored (erased by the compiler,
+never bundled). It failed on all three entrypoints exactly as expected, naming the chain:
+lib/orchestrator.ts -> lib/providers/index.ts -> @/lib/providers/{anthropic,openrouter,groq,
+agent-bridge}. The suite also contains a SELF-CHECK asserting the walker DOES find the adapters
+from app/api/chat/route.ts (legitimate server code) — without that, a broken walker would
+report "no violations" forever and the guard would be theatre.
+ROOT CAUSE, and it was far smaller than the task assumed: a single VALUE import of the BARREL.
+lib/orchestrator.ts and lib/chat/client.ts did `import { AdapterError } from '@/lib/providers'`.
+The barrel is the server-side registry — importing it as a value executes its "Built-in
+adapters" block, registering all four adapters and dragging @anthropic-ai/sdk into any bundle
+that reaches it. Both modules are reachable from app/page.tsx ('use client').
+DELIBERATE DEVIATION FROM THE TASK STEPS, flagged not smuggled: the steps say to create a
+client-safe module "e.g. lib/providers/catalog.ts". That module ALREADY EXISTS —
+lib/providers/types.ts has ZERO imports and already defines AdapterError plus every shared
+type. Creating catalog.ts would have added a redundant indirection layer for no gain. The fix
+is two import lines repointed at '@/lib/providers/types', with a comment at each site
+explaining WHY the barrel is forbidden, so the next person does not "tidy" it back.
+THREE INDEPENDENT PROOFS, all RUN: (1) the boundary test goes RED -> GREEN, 4 passed. (2)
+`grep -rlE "anthropic-version|dangerouslyAllowBrowser" .next/static/chunks/` returns NOTHING
+after a clean production build — previously it matched a 151KB chunk; total client JS dropped
+2.7M -> 2.5M. (3) `npx next build --webpack` now EXITS 0 with ZERO UnhandledSchemeError/
+node:path errors — it previously died outright, which is how this bug was discovered in the
+first place (Turbopack tolerated the node: scheme, webpack did not).
+No key material ever leaked (Next only inlines NEXT_PUBLIC_*), so this was bundle bloat plus a
+violated architecture rule, not a security incident — stated plainly so the record is accurate.
+Verify (all RUN, $? captured directly): parity 0; typecheck 0; npm test 0 with 434/434 across
+38 files (up from 430/37); build 0; test:skill 0; playwright 0 with 14 passed. Flipped -> true.

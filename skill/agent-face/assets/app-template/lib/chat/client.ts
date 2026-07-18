@@ -18,7 +18,10 @@
 // network or browser.
 
 import { parseSSEStream, errorForStatus, normalizeError } from '@/lib/providers/sse'
-import { AdapterError, type ChatMessage, type StreamEvent } from '@/lib/providers'
+// `providers/types`, not the `providers` barrel — this module runs in the
+// browser, and a VALUE import of the barrel registers every server adapter and
+// bundles @anthropic-ai/sdk. See tests/client-boundary.test.ts.
+import { AdapterError, type ChatMessage, type StreamEvent } from '@/lib/providers/types'
 import {
   parseFaceDirective,
   restingEmotionForReply,

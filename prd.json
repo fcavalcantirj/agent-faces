@@ -927,7 +927,7 @@
       "Verify: npx next build --webpack completes without the 'Reading from \"node:path\" is not handled by plugins' UnhandledSchemeError.",
       "Verify: npm run typecheck exits 0."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
