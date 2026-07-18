@@ -658,7 +658,7 @@
       "Verify: evaluations.md contains >= 3 scenarios plus both a Should-trigger and Should-NOT-trigger section.",
       "Verify: each Should-trigger phrase is covered by a trigger phrase or keyword in SKILL.md's description."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

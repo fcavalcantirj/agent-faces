@@ -1491,3 +1491,34 @@ needed. Verify (all headless, all pass): grep confirms both exact question strin
 present verbatim; grep confirms check-env/dev/deploy(vercel|self-host)/scaffold
 script paths and both branches present; `wc -l skill/agent-face/SKILL.md` = 239
 lines (< 500). Flipped this task's passes -> true.
+
+2026-07-18: [skill] Author the skill triggering evaluations — DONE. Wrote
+skill/agent-face/references/evaluations.md (the file SKILL.md already links to
+under "When to use" and the references table but that didn't exist yet). Follows
+the Anthropic Agent Skills guidance: a Should-trigger list (the four canonical
+phrases "give my agent a face", "I want to talk to my agent and see it lip-sync",
+"deploy a voice face UI to Vercel", "put a face on my Hermes/openclaw agent" plus
+paraphrases), a Should-NOT-trigger list (the four decoys "generate a headshot
+photo", "build a face-recognition model", "add face-detection to my camera app",
+"write a cron job" — cases that name "face" but are unrelated), and 4 evaluation
+scenarios (>= the required 3), each a realistic prompt + expected flow + a single
+pass/fail criterion: (1) Mode B — put a face on a running Hermes agent, expecting
+check-env → offer agent-bridge before a hosted key → ASK localhost-or-deploy;
+(2) Mode A — deploy a voice face to Vercel with an Anthropic key, expecting both
+verbatim ASK questions then deploy.mjs --target vercel + after-deploy check;
+(3) localhost try-first with zero keys, expecting dev.mjs (kill-then-start) and an
+honest "voice works locally but a brain is needed for replies"; (4) negative —
+"add face-detection to my camera app" must NOT load the skill. Added a "How to run
+these evaluations against a harness" section (install skill → paste each prompt in
+a fresh session → observe selection + flow → record PASS/FAIL with a suggested log
+line → tune the description on failure) and a headless mechanical coverage check
+(a Node string-check that every Should-trigger phrase's load-bearing keywords
+appear in the SKILL.md frontmatter description; exits non-zero naming any gap).
+Confirmed the SKILL.md description already carries the aligned trigger phrases, so
+no description edit was needed. Verify (both headless, both pass): evaluations.md
+has 4 "### Scenario" blocks plus a "## Should trigger" and a "## Should NOT trigger"
+section; the coverage node script prints COVERED for all four Should-trigger phrases
+and exits 0 (every phrase's keywords — face/agent, talk/lip-sync, deploy/voice face,
+hermes/openclaw/face — are present in the description). SKILL.md untouched (still 239
+lines, well under 500); no root app files changed so no sync-template step. Flipped
+this task's passes -> true.
