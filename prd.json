@@ -377,7 +377,7 @@
       "Verify: first run shows a progress bar to 100% then 'ready'.",
       "Verify: a reload skips re-download and shows 'cached/ready'; canceling routes STT to the hosted fallback."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {

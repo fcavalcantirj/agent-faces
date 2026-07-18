@@ -751,3 +751,48 @@ after the first cached download); (2) on a machine WITHOUT WebGPU it transparent
 and still returns a transcript (the reported backend flips webgpu→wasm); (3) a second transcription
 reuses the resident pipeline with NO re-download. Full end-to-end (mic→worker→transcript) also depends
 on the Whisper download/caching UX + STT auto-selection + orchestrator tasks landing.
+
+2026-07-18: [frontend] Add the Whisper model download and caching UX — DONE.
+Put the ~150 MB in-browser Whisper model behind a deliberate, explained UX. The real logic
+lives in a headlessly-testable core, lib/stt/model-status.ts: a pure reducer modelStatusReducer
+folds the worker's WhisperResponse messages (progress/ready/error) into a small state machine
+(unloaded → downloading → ready | error | canceled), AGGREGATING per-file download percentages
+(files map, keyed by file name) into one 0..100 bar and treating a per-file status:'done' as 100;
+a 'ready' message goes 100% + records the backend (WebGPU/WASM) + flips cached:true (a successful
+load means the shards are now in Cache Storage); an 'error' captures the message + fallbackToHosted
+flag; transcription 'result' messages are ignored (not a load concern). statusTextFor(state) is the
+human line ('Downloading model… 42%' / 'Ready, offline-capable · WEBGPU' / 'Model cached —
+offline-ready' / 'Not downloaded (~150 MB)' / hosted-fallback copy). estimateModelSizeMb(modelId)
+gives the pre-download size estimate (~150 MB for whisper-base; per-model table + default).
+probeModelCached(modelId, {caches}) inspects the browser Cache Storage bucket transformers.js
+persists shards under (TRANSFORMERS_CACHE_NAME='transformers-cache') and returns true iff a cached
+request URL contains the model id — so a reload detects an offline-ready model with NO re-download;
+never throws (missing Cache Storage / any error → false). createModelStatusController({createWorker,
+probeCached}) is the React-agnostic observable glue: subscribe/getState, init() probes the cache so a
+returning user immediately sees 'cached', download() spawns the Whisper worker + posts {type:'load'}
+and streams progress, cancel() TERMINATES the worker and routes STT to the hosted fallback
+(phase 'canceled', fallbackToHosted:true), destroy() tears down. Every browser primitive (Worker,
+Cache Storage) is INJECTED so the whole module runs under jsdom with fakes. components/stt-status.tsx
+is the thin presentational layer + useSttModelStatus() hook (useSyncExternalStore over the controller;
+useEffect runs init() on mount, destroy() on unmount): SttStatus renders the 'DOWNLOAD (~150 MB)' /
+'LOAD MODEL' call-to-action on first/idle use, a live aria progressbar while downloading with a
+'SKIP TO HOSTED' cancel, and the ready/cached readout with backend + model — spawnWhisperWorker()
+builds the real Worker(new URL('../lib/stt/whisper-worker.ts', import.meta.url), {type:'module'})
+client-only so SSR/tests never touch it. Also surfaced the STT engine/backend in the HUD via a new
+optional FaceHud sttReadout prop (adds an 'STT' readout line when provided) so users see $0/private
+mode is active. TDD: wrote lib/stt/model-status.test.ts FIRST (RED) then implemented (GREEN).
+Verify (all headless, all pass): `npm test` 238/238 green incl. 19 new model-status specs — initial
+unloaded/0%/not-cached; per-file progress aggregation (40 then avg 50), clamping + done→100, first
+progress flips to downloading, ready→100%+backend+offline-capable text, error captures message +
+fallback flag, result ignored; statusTextFor cached vs ready-with-backend; estimateModelSizeMb
+plausible + default; probeModelCached true/false/never-throws against a fake CacheStorage; controller
+download() posts load + streams progress→ready, cancel() terminates + routes hosted, init() reflects
+a prior cached model WITHOUT spawning a worker, worker error surfaces on state. `npm run typecheck`
+clean; `npm run build` compiles and prerenders / and /_not-found (+ dynamic /api/chat,/api/config).
+Flipped this task's passes -> true.
+UAT (headless_verifiable:false — needs a browser + the ~150 MB model download): open the app, trigger
+first browser-STT use, confirm the 'download model (~150 MB)' affordance appears, the progress bar
+climbs to 100% then shows 'ready, offline-capable' with the chosen backend (WebGPU, or WASM on
+machines without navigator.gpu); reload and confirm the model shows 'cached/ready' with NO
+re-download; confirm 'skip to hosted' during download terminates the worker and routes STT to the
+hosted fallback; confirm the HUD surfaces the active STT engine + backend.

@@ -10,6 +10,11 @@ interface FaceHudProps {
   title?: string
   /** Secondary line under the title. */
   subtitle?: string
+  /**
+   * Optional speech-to-text readout (e.g. "BROWSER WHISPER · WEBGPU") surfaced
+   * so users see the active STT engine/backend — i.e. that $0/private mode is on.
+   */
+  sttReadout?: string
 }
 
 export function FaceHud({
@@ -17,6 +22,7 @@ export function FaceHud({
   onEmotionChange,
   title = 'AGENT FACE',
   subtitle = 'VOICE FACE INTERFACE',
+  sttReadout,
 }: FaceHudProps) {
   const meta = EMOTION_META[emotion]
 
@@ -73,6 +79,12 @@ export function FaceHud({
             <dt className="w-20 text-muted-foreground/60">RENDER</dt>
             <dd>WEBGL // POINT CLOUD</dd>
           </div>
+          {sttReadout ? (
+            <div className="flex gap-2">
+              <dt className="w-20 text-muted-foreground/60">STT</dt>
+              <dd>{sttReadout}</dd>
+            </div>
+          ) : null}
         </dl>
         <p className="hidden text-right text-[10px] leading-relaxed tracking-wider text-muted-foreground/60 md:block">
           DRAG TO ORBIT
