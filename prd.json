@@ -783,7 +783,7 @@
       "Verify: npm test runs an empty suite green; npm run test:e2e launches the dev server and loads the app.",
       "Verify: the harness can grant mic permission and inject a fake audio stream."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": false
   },
   {
@@ -926,6 +926,35 @@
       "Verify: npm run build exits 0 AND `grep -rlE 'anthropic-version|dangerouslyAllowBrowser' .next/static/chunks/` returns NO files.",
       "Verify: npx next build --webpack completes without the 'Reading from \"node:path\" is not handled by plugins' UnhandledSchemeError.",
       "Verify: npm run typecheck exits 0."
+    ],
+    "passes": false,
+    "headless_verifiable": true
+  },
+  {
+    "category": "frontend",
+    "description": "Fix the SSR/client hydration mismatch on the voice control button",
+    "steps": [
+      "CONTEXT (found 2026-07-18 by the Playwright harness, task 'Set up the app test/eval harness'): loading / logs a React hydration mismatch at app/page.tsx:164. lib/capabilities.ts:77 computes `microphone: Boolean(nav?.mediaDevices?.getUserMedia)`, but there is no `navigator` during SSR, so the server renders 'VOICE UNAVAILABLE — TYPE BELOW' while the client renders 'HOLD TO TALK (OR SPACE)'. app/page.tsx reads the capability matrix directly during render with no mount guard. This is NOT dev-only noise: in production the user sees a flash of the wrong, discouraging label before React corrects it client-side.",
+      "RED first: add a test asserting the capability matrix is SSR-safe — evaluating it with no `navigator`/`window` must yield the same *rendered control label* the client settles on, or the component must render a stable placeholder until mounted. Confirm it FAILS first.",
+      "Fix by rendering a deterministic, capability-agnostic initial state on the server and resolving real capabilities after mount (useEffect/useSyncExternalStore with a server snapshot), so server and client HTML agree.",
+      "Do NOT paper over it with suppressHydrationWarning — that hides the mismatch instead of fixing it.",
+      "Keep the no-capability path honest: when voice truly is unavailable after mount, the button must still show the unavailable state and the type-to-chat fallback must work.",
+      "If any root app file changed, re-run: node skill/agent-face/scripts/sync-template.mjs",
+      "Verify: npm test green, npm run typecheck exits 0.",
+      "Verify: npm run test:e2e passes AND the dev-server output contains no 'hydration' / 'did not match' warning during the smoke run."
+    ],
+    "passes": false,
+    "headless_verifiable": true
+  },
+  {
+    "category": "frontend",
+    "description": "Guard the Eidolon skin against double createRoot on the same container",
+    "steps": [
+      "CONTEXT (found 2026-07-18 by the Playwright harness): the browser console logs 'You are calling ReactDOMClient.createRoot() on a container that has already been passed to createRoot()' from components/skins/eidolon-skin.tsx:102. mount() calls createRoot(container) with no guard, so a remount (React StrictMode double-invoke in dev, a skin switch, or any re-entry) creates a second root over the same DOM node — orphaning the first root's Three.js scene and leaking a WebGL context.",
+      "RED first: add a test that calls mount() twice on the same container and asserts createRoot is invoked only once (or that the prior root is unmounted first) and that no second root leaks. Confirm it FAILS.",
+      "Fix by making mount() idempotent: if this.root already exists for the container, reuse it (root.render) or unmount cleanly before creating a new one; ensure unmount() disposes the Three.js renderer and nulls this.root.",
+      "Verify: npm test green (including the new idempotency test), npm run typecheck exits 0.",
+      "Verify: npm run test:e2e passes AND the browser console during the smoke run contains no 'already been passed to createRoot' warning."
     ],
     "passes": false,
     "headless_verifiable": true

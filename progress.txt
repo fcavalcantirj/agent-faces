@@ -1694,3 +1694,42 @@ references the sync-template parity requirement AND all six CI checks by name (g
 sync-template/parity/typecheck/build/skill-lint/template parity/portability/test:skill all
 hit); every relative link in CONTRIBUTING.md and docs/development.md resolves to an existing
 path (checked programmatically — 7/7 OK, 0 broken). Flipped this task's passes -> true.
+2026-07-18: [infra] Set up the app test/eval harness (Vitest unit + Playwright browser) — DONE.
+Vitest was already configured (jsdom + "@/" alias, 413 tests green), so this task added the
+browser half and the shared fakes. Installed @playwright/test 1.61.1 + @vitest/ui and the
+chromium binary; added scripts test:e2e (playwright test) and test:ui (vitest --ui) alongside
+the existing test/test:watch. Wrote playwright.config.ts: testDir tests/e2e, testMatch
+**/*.spec.ts (deliberately disjoint from vitest's **/*.test.ts so neither runner collects the
+other's files), baseURL from PLAYWRIGHT_PORT (default 3000) and webServer `npm run dev --
+--port $PORT`. The port is configurable ON PURPOSE: :3000 was already occupied by another
+session's dev server, and killing a process this session did not start is not acceptable —
+the harness must coexist, not evict. Chromium launches with --use-fake-ui-for-media-stream,
+--use-fake-device-for-media-stream, --use-file-for-fake-audio-capture=<speech-16k.wav> and
+--autoplay-policy=no-user-gesture-required, plus context permission 'microphone'.
+Fixtures under tests/fixtures/ are REAL recorded speech (macOS `say` -> ffmpeg), not synthetic
+tones: speech-16k.wav (16kHz mono PCM — the format chromium's fake-audio flag requires),
+speech-16k.webm (Opus, the shape MediaRecorder emits) and tts-sample.wav (24kHz, varied
+visemes for lip-sync). tests/fixtures/index.ts exports the ground-truth transcripts plus
+normalizeTranscript()/transcriptAccuracy() so STT is scored, never compared byte-exact against
+a probabilistic model; README.md documents regeneration. Per "reuse, don't reinvent" the fake
+SSE transport was EXTRACTED from lib/chat/client.test.ts into tests/helpers/sse.ts (frame/
+delta/doneFrame/errorFrame/makeFetch/collect, honoring AbortSignal so barge-in is exercised
+for real) rather than writing a second faker; tests/helpers/mock-adapter.ts implements the
+real ChatAdapter interface (no cast, so an interface change breaks the typecheck) with a
+textOf() helper. Verify (all RUN, all pass): npm run typecheck exits 0; npm test 413/413 green
+across 35 files (no regression); `npx playwright test` on port 3100 => 3 passed in real
+chromium — (1) dev server boots and the app renders, (2) COOP/COEP headers served AND
+self.crossOriginIsolated === true AND SharedArrayBuffer defined, (3) fake mic granted and the
+captured stream's measured peak amplitude > 0.01, i.e. carrying genuine speech rather than
+silence. That third assertion is deliberate: a fake mic returning silence would let every
+downstream voice test pass while proving nothing. Flipped this task's passes -> true.
+UAT: run `npm run test:e2e` yourself and watch it headed (`npx playwright test --headed`) to
+confirm the app looks right, then confirm with a REAL microphone that holding "HOLD TO TALK"
+captures your voice — the harness proves chromium's synthetic device works, not that real
+hardware permission/capture works on your machine and browser.
+NOTE — two genuine app bugs surfaced by actually running the browser (logged as new tasks, not
+fixed here): (1) React hydration mismatch at app/page.tsx:164 — lib/capabilities.ts:77 reads
+navigator.mediaDevices which is absent during SSR, so the server renders "VOICE UNAVAILABLE —
+TYPE BELOW" and the client renders "HOLD TO TALK"; users see a flash of the wrong label in
+production. (2) ReactDOMClient.createRoot() called twice on the same container at
+components/skins/eidolon-skin.tsx:102, orphaning the prior root's Three.js scene.
