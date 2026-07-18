@@ -674,7 +674,7 @@
       "Verify: all four --help invocations succeed under node with no missing-dependency errors.",
       "Verify: the portability grep returns zero harness-coupled matches in scripts."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

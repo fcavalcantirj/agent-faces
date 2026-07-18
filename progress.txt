@@ -1522,3 +1522,29 @@ and exits 0 (every phrase's keywords — face/agent, talk/lip-sync, deploy/voice
 hermes/openclaw/face — are present in the description). SKILL.md untouched (still 239
 lines, well under 500); no root app files changed so no sync-template step. Flipped
 this task's passes -> true.
+
+2026-07-18: [skill] Verify cross-harness portability and document the harness matrix — DONE.
+Audited all four skill scripts (scaffold/dev/check-env/deploy + sync-template) and confirmed
+they use ONLY node:* built-ins (node:fs, node:path, node:child_process, node:net, node:url,
+node:process) — no Claude-specific tooling, no MCP client, no harness API, and no external npm
+deps needed to RUN a script. The broad grep `anthropic|claude|mcp|allowed-tools|tool_use` over
+skill/agent-face/scripts matches ONLY provider-domain references (the ANTHROPIC_API_KEY env var,
+claude-* model ids, the `claude-code` agent-bridge KIND, and portability comments) — the actual
+harness-coupling tokens (mcp | allowed-tools | tool_use | claude-code-sdk | @anthropic-ai/sdk|
+claude) return ZERO matches, i.e. the skill never calls a Claude/MCP API to do its own work.
+Confirmed SKILL.md frontmatter is the portable/open subset only (name: agent-face — contains
+neither 'claude' nor 'anthropic'; description; version; license: MIT) with all harness/brand-
+specific keys (brand, category, package-manager) under metadata:. Wrote
+skill/agent-face/references/portability.md (already linked from SKILL.md): a "what portable means"
+guarantee table, a harness matrix for Claude Code / Hermes / openclaw / trustclaw / nanoclaw (each
+row: how it discovers SKILL.md + how it invokes the scripts with plain node, plus Mode-B notes
+where the harness can double as the brain), the four-script table with standalone invocations, a
+"verify it yourself" section with both the --help loop and the harness-coupling grep, an explicit
+note distinguishing provider-domain 'claude' mentions from coupling, and an "adding a harness"
+note (nothing to add — discovery is read-SKILL.md, invocation is run-node). Verify (all headless,
+all pass): all four `node skill/agent-face/scripts/<name>.mjs --help` exit 0 under a bare node with
+no missing-dependency errors; the harness-coupling grep returns zero matches; portability.md names
+all five harnesses. Also ran gates: `sync-template.mjs --check` reports parity (77 files in sync —
+this task only added a references/ doc, not a root app file, so no re-sync was required); SKILL.md
+is 239 lines (<=500); `npm test` 413/413 green (no code touched, docs-only). Flipped this task's
+passes -> true.
