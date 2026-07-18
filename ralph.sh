@@ -17,6 +17,9 @@ set -e
 #   MODEL=claude-opus-4-8 ./ralph.sh 3   # pin a model (default: Claude Code default)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Load git-ignored local config if present (RALPH_PUSH, MODEL, TELEGRAM_*, etc.)
+if [ -f .env.ralph.local ]; then set -a; . ./.env.ralph.local; set +a; fi
+
 # PRD file (override with env var). Lives at the repo root for claude-faces.
 PRD_FILE="${PRD_FILE:-prd.json}"
 
@@ -103,6 +106,7 @@ CRITICAL: \
 - NEVER modify anything under ../fuguFaces (read-only reference). \
 - Always 'git add .' (include NEW files) before committing. \
 - After commit, you are DONE. Exit immediately. \
+- If a task's headless_verifiable is false, you CANNOT fully verify it headlessly: build it to spec, write the mock/unit tests you can, run every check you can, append a 'UAT:' line to progress.txt naming what a human must confirm, and STILL set passes=true. Never skip a task (later tasks depend on it); never change the headless_verifiable flag. \
 - Keep files focused (~500 lines max)." > "$tmpfile" 2>&1 || true
 
   iter_end=$(date +%s)

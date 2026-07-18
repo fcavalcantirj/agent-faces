@@ -18,6 +18,9 @@ CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'
 RED='\033[0;31m'; MAGENTA='\033[0;35m'; BLUE='\033[0;34m'
 BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
 
+# Load git-ignored local config if present (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, BATCH_SIZE, RALPH_PUSH, MODEL…)
+if [ -f .env.ralph.local ]; then set -a; . ./.env.ralph.local; set +a; fi
+
 # Config (override with env vars)
 BATCH_SIZE=${BATCH_SIZE:-3}
 WAIT_TIME_MINS=${WAIT_TIME_MINS:-15}         # backoff after API errors

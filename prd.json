@@ -14,7 +14,8 @@
       "Verify: ls shows app/ components/ lib/ public/ skill/ docs/ .github/ and prd.json, LICENSE, .gitignore present.",
       "Verify: git status runs cleanly and node -e require('fs').readFileSync('prd.json') parses prd.json as a valid JSON array."
     ],
-    "passes": true
+    "passes": true,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -32,7 +33,8 @@
       "Verify: npm run typecheck passes with no errors.",
       "Verify: npm run build completes and produces a .next/ build."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -47,7 +49,8 @@
       "Verify: npm run typecheck passes after the copy.",
       "Verify: temporarily mount AgentFace with emotion='neutral', run npm run dev, and confirm the particle face renders and all 12 emotions cycle via keys 1-0/Q/W with no console errors."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -61,7 +64,8 @@
       "Verify: npm run build succeeds and favicon/OG references resolve (no 404s in npm run dev).",
       "Verify: grep -ri for claude/anthropic/hermes over public/ and app/layout.tsx returns no branding hits."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "infra",
@@ -77,7 +81,8 @@
       "Verify: grep NEXT_PUBLIC .env.example returns nothing (no secret is client-exposed).",
       "Verify: .env.example lists all Mode A + Mode B keys plus the transcription knobs and a degradation note."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -93,7 +98,8 @@
       "Verify: navigator.gpu resolves an adapter in Chrome/Edge without a COEP error.",
       "Verify: the particle face still renders with the new headers applied."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -108,7 +114,8 @@
       "Verify: feeding a test audio element playing a spoken clip, getFeatures().volume oscillates 0..1 in sync with speech and returns non-empty viseme labels.",
       "Verify: with no audio playing, getFeatures().volume decays to ~0."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -125,7 +132,8 @@
       "Verify: when audio stops, the mouth returns to the neutral/emotion target within one morph interval.",
       "Verify: framerate stays ~60fps in Chrome devtools performance while lip-syncing."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -140,7 +148,8 @@
       "Verify: switching skin id in settings swaps EIDOLON and the TalkingHead stub without touching orchestrator code.",
       "Verify: selecting the talkinghead skin without the model present degrades to EIDOLON with a console warning, not a crash."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -155,7 +164,8 @@
       "Verify: a unit test asserts each lifecycle phase yields the documented Emotion.",
       "Verify: a reply ending in [[face:happy]] leaves the face happy after speaking, with the directive text stripped from spoken output."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "backend",
@@ -170,7 +180,8 @@
       "Verify: npm run typecheck passes with a no-op FakeAdapter registered.",
       "Verify: listAvailableAdapters() returns only adapters whose required env keys / reachable endpoints are present."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "backend",
@@ -186,7 +197,8 @@
       "Verify: a scripted streamChat over ANTHROPIC_API_KEY yields multiple delta events then a done event.",
       "Verify: aborting the AbortSignal stops further deltas; a missing key excludes the adapter from the registry."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "backend",
@@ -202,7 +214,8 @@
       "Verify: streamChat against a cheap OpenRouter model yields incremental deltas then done.",
       "Verify: listModels() includes at least one Hermes model; a 401 from a bad key surfaces as a typed AdapterError."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "backend",
@@ -217,7 +230,8 @@
       "Verify: streamChat yields deltas with a sub-second first token then done.",
       "Verify: a missing GROQ_API_KEY excludes the adapter; a bad key surfaces as a typed AdapterError."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "backend",
@@ -236,7 +250,8 @@
       "Verify: with AGENT_BRIDGE_KIND=hermes against a reachable Hermes api_server, a session is created and chat returns a reply.",
       "Verify: in production with a private (non-public) AGENT_BRIDGE_URL, the adapter is absent from listAvailableAdapters()."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "backend",
@@ -254,7 +269,8 @@
       "Verify: aborting the client mid-stream stops upstream token generation.",
       "Verify: an unknown provider returns 400 and a keyless/unreachable brain returns a clear 'provider unavailable' error."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "backend",
@@ -267,7 +283,8 @@
       "Verify: GET /api/config returns { providers:{...}, agentBridge, stt:{...}, tts:{...} } reflecting the current env with no secret material.",
       "Verify: removing a key flips the corresponding boolean; the response contains no 'sk-' or key-like substrings."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -282,7 +299,8 @@
       "Verify: calling streamChat renders tokens progressively in the transcript panel.",
       "Verify: the first sentence is dispatched to TTS before the stream completes; aborting stops token accumulation and any queued TTS."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -296,7 +314,8 @@
       "Verify: sending messages accumulates a coherent multi-turn history passed to /api/chat.",
       "Verify: reloading restores prior turns and the selected provider/model; reset clears history and returns the face to neutral."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -311,7 +330,8 @@
       "Verify: hold-to-talk records and yields a non-empty opus blob under the size cap.",
       "Verify: denying mic permission shows a typed hint and leaves typing available; releasing reliably ends the recording."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -326,7 +346,8 @@
       "Verify: hands-free, speaking a sentence auto-starts and auto-ends a turn end-to-end.",
       "Verify: speaking over the agent's TTS interrupts it (barge-in); background noise below threshold does not start a turn."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -341,7 +362,8 @@
       "Verify: the worker loads whisper-base once, reports progress, and transcribes a short clip to correct text offline (airplane mode).",
       "Verify: on a machine without WebGPU it transparently uses WASM and still returns a transcript; a second transcription reuses the resident pipeline with no re-download."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -355,7 +377,8 @@
       "Verify: first run shows a progress bar to 100% then 'ready'.",
       "Verify: a reload skips re-download and shows 'cached/ready'; canceling routes STT to the hosted fallback."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "backend",
@@ -369,7 +392,8 @@
       "Verify: with GROQ_API_KEY set, a short webm/opus clip returns accurate text and provider 'groq'.",
       "Verify: with only OPENAI_API_KEY set, it falls back to OpenAI; an oversize clip returns 413 with no upstream call."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -383,7 +407,8 @@
       "Verify: 'auto' uses the browser worker when cached and hosted when it is not.",
       "Verify: pulling the network still transcribes via the cached browser model; with neither path, the UI shows a clear message and keeps text input working."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -397,7 +422,8 @@
       "Verify: a multi-sentence reply speaks fully without the ~15s cutoff.",
       "Verify: the mouth animates during speech via the estimated envelope and settles when done; cancel() immediately silences queued utterances."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "backend",
@@ -411,7 +437,8 @@
       "Verify: POST returns a playable streamed audio response that starts before completion.",
       "Verify: the returned audio, played through an audio element on the shared AudioContext, is tappable by the wawa-lipsync analyser; a missing key returns a typed error the client handles."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -427,7 +454,8 @@
       "Verify: OpenAI TTS produces real FFT-driven lip-sync visibly better than the Web Speech estimate.",
       "Verify: barge-in silences audio and stops the mouth within a frame; switching engine changes voice + mouthSource with no leftover analyser connections."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -441,7 +469,8 @@
       "Verify: with Kokoro selected, replies are spoken fully offline and drive FFT lip-sync.",
       "Verify: a Kokoro load failure degrades to Web Speech without a crash; the model caches and reloads without re-download."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -456,7 +485,8 @@
       "Verify: only server-available brains are selectable; unavailable ones show why.",
       "Verify: changing model/voice/skin/STT-mode updates behavior immediately and survives reload; agent-bridge controls are hidden when /api/config reports it unreachable."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -472,7 +502,8 @@
       "Verify: a full spoken turn runs end-to-end: mic -> transcript -> streamed reply -> spoken audio -> lip-synced mouth -> resting emotion.",
       "Verify: interrupting mid-reply cleanly starts a new turn; the face shows thinking during the stream and speaking synced to audio."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -486,7 +517,8 @@
       "Verify: with zero env keys the app boots, the face animates, and browser STT + Web Speech still function for a local/dev brain.",
       "Verify: removing GROQ/OPENAI keys routes STT to the browser worker and TTS to Web Speech; with no brain at all, the UI explains what to configure instead of throwing."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "skill",
@@ -502,7 +534,8 @@
       "Verify: wc -l skill/agent-face/SKILL.md is <= 500.",
       "Verify: a grep for a frontmatter name containing claude/anthropic returns nothing, and the description contains explicit trigger phrases plus a WHEN clause."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "infra",
@@ -515,7 +548,8 @@
       "Verify: docker compose up serves the app on the configured port.",
       "Verify: with an agent reachable on the same network, Mode B (agent-bridge) connects over its private URL without a tunnel."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "skill",
@@ -529,7 +563,8 @@
       "Verify: node skill/agent-face/scripts/sync-template.mjs --check reports parity.",
       "Verify: copy assets/app-template to a temp dir, run npm install && npm run build, and confirm it builds standalone."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "skill",
@@ -544,7 +579,8 @@
       "Verify: node skill/agent-face/scripts/scaffold.mjs /tmp/af-test creates the app files in the target.",
       "Verify: re-running without --force on a populated target exits non-zero with a clear message; cd /tmp/af-test && npm run build succeeds after install."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "skill",
@@ -559,7 +595,8 @@
       "Verify: run the script twice in a row; only one process listens on the port (lsof -ti tcp:3000 | wc -l returns 1).",
       "Verify: the browser opens to the running app (or is skipped with --no-open) and the face renders."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "skill",
@@ -574,7 +611,8 @@
       "Verify: with no keys set, the script prints all crosses, a 'no brain configured' hint, and exits non-zero.",
       "Verify: with ANTHROPIC_API_KEY set, it prints Anthropic available, names it as the selected brain, and exits 0 without leaking the value."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "skill",
@@ -588,7 +626,8 @@
       "Verify: with vercel absent and --target vercel, the script exits non-zero with the install hint and no partial deploy.",
       "Verify: --target self-host builds and prints a runnable docker compose / next start command; a missing app file fails preflight fast before any network call."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "skill",
@@ -603,7 +642,8 @@
       "Verify: SKILL.md contains the exact question strings and all branches with correct script paths.",
       "Verify: SKILL.md remains under 500 lines after the additions."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "skill",
@@ -618,7 +658,8 @@
       "Verify: evaluations.md contains >= 3 scenarios plus both a Should-trigger and Should-NOT-trigger section.",
       "Verify: each Should-trigger phrase is covered by a trigger phrase or keyword in SKILL.md's description."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "skill",
@@ -633,7 +674,8 @@
       "Verify: all four --help invocations succeed under node with no missing-dependency errors.",
       "Verify: the portability grep returns zero harness-coupled matches in scripts."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "docs",
@@ -648,7 +690,8 @@
       "Verify: every env var named in backends.md matches .env.example exactly (diff the key names).",
       "Verify: the architecture mermaid block renders (fenced mermaid) and contains no Hermes-only references."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "docs",
@@ -661,7 +704,8 @@
       "Verify: face.md lists exactly the 12 emotions present in lib/face-points.ts.",
       "Verify: voice.md's env var names (OPENAI_API_KEY, GROQ_API_KEY, OPENAI_TRANSCRIBE_*) match .env.example."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "docs",
@@ -674,7 +718,8 @@
       "Verify: troubleshooting.md includes the six failure categories, each with a concrete check.",
       "Verify: deploy.md commands cover both targets and reference no removed Hermes-only variable."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "docs",
@@ -690,7 +735,8 @@
       "Verify: README renders with no broken relative links.",
       "Verify: a grep for 'quick start', 'deploy', 'skill', and 'brain' confirms all major sections are present."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "docs",
@@ -705,7 +751,8 @@
       "Verify: the button URL parses and its env query param equals ANTHROPIC_API_KEY,OPENROUTER_API_KEY,GROQ_API_KEY,OPENAI_API_KEY.",
       "Verify: clicking the rendered button opens the Vercel clone page listing all four env prompts (manual check)."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "docs",
@@ -720,7 +767,8 @@
       "Verify: CONTRIBUTING.md references the sync-template parity requirement and the CI checks by name.",
       "Verify: relative links in CONTRIBUTING.md and docs/development.md resolve."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "infra",
@@ -735,7 +783,8 @@
       "Verify: npm test runs an empty suite green; npm run test:e2e launches the dev server and loads the app.",
       "Verify: the harness can grant mic permission and inject a fake audio stream."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -749,7 +798,8 @@
       "Verify: the browser-Whisper transcript contains the expected keywords; the auto fallback path is exercised.",
       "Verify: the test runs without real network calls for the hosted case."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "backend",
@@ -763,7 +813,8 @@
       "Verify: SSE deltas arrive incrementally, not as one buffered blob; abort cancels upstream and stops token accumulation.",
       "Verify: unknown/keyless providers return the documented error codes."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -778,7 +829,8 @@
       "Verify: analyser volume is non-flat and time-aligned with the fixture audio; mouth displacement tracks volume.",
       "Verify: silence produces near-zero mouth motion."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "frontend",
@@ -792,7 +844,8 @@
       "Verify: all phase-to-emotion mappings pass; directive override and text stripping behave correctly.",
       "Verify: the HUD reflects the expected sequence during a mocked turn."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "frontend",
@@ -806,7 +859,8 @@
       "Verify: zero-key boot has no console errors and an interactive face; STT/TTS fall back to fully-local engines.",
       "Verify: the missing-brain state is explanatory and recoverable."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "infra",
@@ -821,7 +875,8 @@
       "Add an npm script test:skill at repo root that runs the smoke runner; clean up all temp dirs.",
       "Verify: npm run test:skill exits 0 with all assertions passing and temp dirs removed."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   },
   {
     "category": "infra",
@@ -837,7 +892,8 @@
       "Verify: the workflow passes on a clean checkout.",
       "Verify: introducing a claude-named SKILL.md name or an out-of-sync template makes CI fail as designed (manual check)."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "infra",
@@ -853,22 +909,24 @@
       "Verify: the button-driven deploy builds and serves the app without manual config beyond env prompts.",
       "Verify: the no-keys deploy loads and degrades gracefully rather than erroring."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": false
   },
   {
     "category": "infra",
     "description": "Finalize the deliverable prd.json at repo root",
     "steps": [
       "PREREQUISITE: DEPENDS ON all prior tasks (this file is the project deliverable).",
-      "Ensure root prd.json is a bare JSON array of task objects, each with exactly the keys category, description, steps, passes.",
+      "Ensure root prd.json is a bare JSON array of task objects, each with exactly the keys category, description, steps, passes, headless_verifiable.",
       "Ensure category values are within {backend, frontend, docs, skill, infra} and passes is false for every task until built.",
       "Ensure every task's steps end with one or more Verify: lines and dependencies are expressed as prose (DEPENDS ON / PREREQUISITE).",
       "Order the array so a developer can execute top-to-bottom with dependencies satisfied.",
       "Prefix only truly critical tasks with the URGENT marker in their description.",
       "As tasks complete, flip their passes flag to true to track progress.",
-      "Verify: node parses prd.json as an array and every element has exactly the four required keys with a valid category.",
+      "Verify: node parses prd.json as an array and every element has exactly the five required keys (category, description, steps, passes, headless_verifiable) with a valid category.",
       "Verify: no task has an invalid category and every task has at least one Verify: step."
     ],
-    "passes": false
+    "passes": false,
+    "headless_verifiable": true
   }
 ]

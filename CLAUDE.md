@@ -68,7 +68,7 @@ mirror if you don't want unattended public pushes. Cost/context is reported, not
 
 ## Verifying in a headless / overnight run
 
-You run **unattended, headless, with no human and no browser.** Before flipping a task to `passes: true`:
+You run **unattended, headless, with no human and no browser.** Each task carries a **`headless_verifiable`** boolean: `true` = you can fully verify it headlessly; `false` = confirming it truly works needs a human UAT pass (browser / mic / audible playback / live paid key / running external agent / Docker run / deploy). **Never change this flag** — it's a fixed label. After the run, `./uat.sh` lists every `false` task for the human. Before flipping a task to `passes: true`:
 
 - **Run every headless check the task lists** — `npm run typecheck`, `npm run build`, unit/integration tests, `grep`/file assertions. These GATE the task. If a check you *can* run is failing, the task is NOT done — fix it.
 - **Set up the test runner (`vitest`) the first time a task needs it** if it isn't installed yet (add the dep + `vitest.config.ts` + a `test` script). Don't wait for the later harness task.
