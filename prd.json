@@ -690,7 +690,7 @@
       "Verify: every env var named in backends.md matches .env.example exactly (diff the key names).",
       "Verify: the architecture mermaid block renders (fenced mermaid) and contains no Hermes-only references."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {

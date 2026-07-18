@@ -1548,3 +1548,34 @@ all five harnesses. Also ran gates: `sync-template.mjs --check` reports parity (
 this task only added a references/ doc, not a root app file, so no re-sync was required); SKILL.md
 is 239 lines (<=500); `npm test` 413/413 green (no code touched, docs-only). Flipped this task's
 passes -> true.
+
+2026-07-18: [docs] Write references/architecture.md and references/backends.md — DONE.
+Authored the two brain/architecture reference docs, kept consistent with .env.example and
+docs/env-contract.md. skill/agent-face/references/architecture.md documents: the runtime voice
+loop (browser MediaRecorder -> STT browser/hosted -> /api/chat brain streamed as SSE -> TTS
+Web Speech/api/tts -> wawa-lipsync analyser -> 12-emotion particle face), a fenced ```mermaid
+sequenceDiagram of the loop (generic — the brain is the only swappable box; NO Hermes-only
+references so it renders for any backend), the deploy boundary (Vercel serverless vs self-host
+Docker on a VPS, with the Mode B reachability difference: public HTTPS/tunnel or
+ALLOW_AGENT_BRIDGE_IN_PROD=1 on Vercel vs private network with SELF_HOST=1 self-hosted), the
+security model (all provider secrets server-side only, never the client-exposed NEXT_PUBLIC_
+marker; the browser learns capabilities via /api/config booleans), and the repo layout tree
+(root Next.js app, thin app/api/* proxies, lib/providers seam, docs/env-contract.md,
+skill/agent-face package + synced app-template, prd.json). skill/agent-face/references/backends.md
+documents: Mode A (Anthropic ANTHROPIC_API_KEY/ANTHROPIC_DEFAULT_MODEL, OpenRouter
+OPENROUTER_API_KEY/OPENROUTER_DEFAULT_MODEL, Groq GROQ_API_KEY/GROQ_DEFAULT_MODEL + the dual-use
+STT note, OPENAI_API_KEY for STT/TTS only), Mode B agent-bridge (all five kinds hermes/openclaw/
+claude-code/ollama/openai-compatible with their transports; AGENT_BRIDGE_KIND/URL/KEY/MODEL +
+HERMES_API_BASE_URL/HERMES_API_KEY aliases), the selection priority
+(ANTHROPIC->OPENROUTER->GROQ->agent-bridge, explicit pick wins), the reachability rules
+(localhost/self-host direct with SELF_HOST=1; Vercel only via public HTTPS or
+ALLOW_AGENT_BRIDGE_IN_PROD=1), the graceful-degradation matrix, and the two required subsections
+"How to wire your own agent" and "How to add a provider" (the single ChatAdapter seam + one
+registerAdapter() line, the ONE place /api/chat dispatches). Verify (both headless, both pass):
+diffed every UPPER_SNAKE env token in backends.md against the KEY= names in .env.example — zero
+stray tokens, every env var matches exactly (reworded a "*_DEFAULT_MODEL" wildcard to prose so it
+isn't mistaken for a key); architecture.md contains exactly one fenced ```mermaid block and a grep
+for hermes inside that block returns nothing (no Hermes-only references, renders generically). Also
+confirmed all relative links in both docs resolve (../../../.env.example, ../../../docs/env-contract.md,
+backends.md, deploy.md). Docs-only, no app/root files touched, so no sync-template re-run needed.
+Flipped this task's passes -> true.
