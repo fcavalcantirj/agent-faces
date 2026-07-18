@@ -6,6 +6,12 @@ node_modules/
 out/
 *.tsbuildinfo
 next-env.d.ts
+# ...but the app-template's copy is a deliberate SCAFFOLD ASSET, synthesized by
+# skill/agent-face/scripts/sync-template.mjs, not a build artifact. Without this
+# negation the pattern above matches it too, so it could never be committed —
+# and `sync-template.mjs --check` then failed on every fresh clone (it expects
+# the file, git refuses to track it). Caught by the fresh-clone final verify.
+!skill/agent-face/assets/app-template/next-env.d.ts
 
 # production / self-host
 build/
