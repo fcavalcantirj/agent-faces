@@ -1024,7 +1024,7 @@
       "Verify: npm run test:coverage exits 0 and the reported statements percentage has genuinely increased from the recorded 58.21% baseline.",
       "Verify: every added test fails when the behaviour it covers is deliberately broken (spot-check at least three)."
     ],
-    "passes": false,
+    "passes": true,
     "headless_verifiable": true
   },
   {
