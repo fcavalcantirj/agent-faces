@@ -16,6 +16,7 @@ import {
   type ConversationStore,
   type ConversationTurn,
   type InputMode,
+  type SttLanguage,
 } from '@/lib/conversation'
 import type { SttMode } from '@/lib/stt'
 import type { TtsEngine } from '@/lib/tts'
@@ -49,6 +50,8 @@ export interface UseConversation {
   setInputMode(mode: InputMode): void
   /** Choose the speech-to-text path (browser | hosted | auto). */
   setSttMode(mode: SttMode): void
+  /** Pin the transcription language (auto = per-clip detection). */
+  setSttLanguage(language: SttLanguage): void
   /** Choose the voice-out engine (web-speech | openai | kokoro). */
   setTtsEngine(engine: TtsEngine): void
   /** Choose the face renderer skin (eidolon | talkinghead). */
@@ -98,6 +101,10 @@ export function useConversation(
     [store],
   )
   const setSttMode = useCallback((mode: SttMode) => store.setSttMode(mode), [store])
+  const setSttLanguage = useCallback(
+    (language: SttLanguage) => store.setSttLanguage(language),
+    [store],
+  )
   const setTtsEngine = useCallback(
     (engine: TtsEngine) => store.setTtsEngine(engine),
     [store],
@@ -121,6 +128,7 @@ export function useConversation(
       setModel,
       setInputMode,
       setSttMode,
+      setSttLanguage,
       setTtsEngine,
       setFaceSkin,
       setSystem,
@@ -137,6 +145,7 @@ export function useConversation(
       setModel,
       setInputMode,
       setSttMode,
+      setSttLanguage,
       setTtsEngine,
       setFaceSkin,
       setSystem,

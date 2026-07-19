@@ -2706,3 +2706,24 @@ this exact path); sync-template run; npm run verify EXIT=0 (6/6).
 UAT: [frontend] Felipe by voice, NO special phrasing: ask for a build; the ack (model's own or
 synthetic) must be HEARD within ~1-2s of work starting, then the answer after. His ears are
 the gate.
+
+2026-07-19: [frontend] VOICE LANGUAGE picker — Felipe (live): speaking English, transcript came
+out as Portuguese phonetic soup ("Egal pramim tipo neuro-influencio ke tu"). WHY: nothing ever
+pinned the transcription language — the orchestrator's language dep was never set and
+OPENAI_TRANSCRIBE_LANGUAGE is unset, so hosted Whisper auto-detects PER CLIP; VAD segments are
+short (little signal), the API is stateless, and a Brazilian accent in English tips the
+detector to pt, which then renders the English PHONETICALLY as Portuguese. Not translation, not
+the agent — language misdetection per clip (why some turns were fine).
+FIX: the plumbing already existed end-to-end (orchestrator language -> /api/transcribe ->
+OpenAI; browser Whisper engine takes language too) — it was just never fed. Added
+settings.sttLanguage ('auto'|'en'|'pt', default auto, persisted + normalized like its
+siblings), a VOICE LANGUAGE Segmented in the settings drawer, and the orchestrator now feeds
+sttLanguageHint(settings) at transcribe time with deps.language kept as the embedder override.
+Felipe chose the picker over an env pin because he genuinely speaks both languages.
+TDD: store test (default/persist/junk-normalizes) + orchestrator test (pt passed, auto ->
+undefined, deps override wins) written first, RED 4 -> GREEN 19; settings snapshots updated.
+Verify (all RUN, $? captured directly): npm test EXIT=0; eslint/typecheck EXIT=0;
+PLAYWRIGHT_PORT=3100 playwright EXIT=0 (15 passed — degradation opens the settings drawer with
+the new control); sync-template run; npm run verify EXIT=0 (6/6).
+UAT: [frontend] Felipe: settings -> VOICE LANGUAGE -> English; speak English -> clean English
+transcript; flip to Português for PT sessions; Auto remains the default behaviour.

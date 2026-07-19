@@ -98,6 +98,7 @@ describe('conversation store', () => {
       model: 'llama-3.1-8b-instant',
       inputMode: 'push-to-talk',
       sttMode: 'auto',
+      sttLanguage: 'auto',
       ttsEngine: 'web-speech',
       faceSkin: 'eidolon',
     })
@@ -111,6 +112,24 @@ describe('conversation store', () => {
     // A brand-new store over the SAME storage = a page reload → mode restored.
     const reloaded = createConversationStore({ storage })
     expect(reloaded.getState().settings.inputMode).toBe('hands-free')
+  })
+
+  it('voice language: defaults to auto, persists an explicit choice, rejects junk', () => {
+    // Whisper auto-detect misreads accented English as Portuguese (live,
+    // 2026-07-19) — the picker pins it, and the pin must survive a reload.
+    const store = createConversationStore({ storage })
+    expect(store.getState().settings.sttLanguage).toBe('auto')
+    store.setSttLanguage('pt')
+    expect(store.getState().settings.sttLanguage).toBe('pt')
+
+    const reloaded = createConversationStore({ storage })
+    expect(reloaded.getState().settings.sttLanguage).toBe('pt')
+
+    // A corrupted persisted value normalizes back to auto on load.
+    const blob = JSON.parse(storage.dump[CONVERSATION_STORAGE_KEY])
+    blob.settings.sttLanguage = 'klingon'
+    storage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(blob))
+    expect(createConversationStore({ storage }).getState().settings.sttLanguage).toBe('auto')
   })
 
   it('persists to localStorage under a versioned key and restores on reload', () => {
@@ -132,6 +151,7 @@ describe('conversation store', () => {
       model: 'claude-opus-4-8',
       inputMode: 'push-to-talk',
       sttMode: 'auto',
+      sttLanguage: 'auto',
       ttsEngine: 'web-speech',
       faceSkin: 'eidolon',
     })

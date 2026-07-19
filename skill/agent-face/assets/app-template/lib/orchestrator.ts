@@ -26,7 +26,7 @@
 //     the mouth is bridged from the TTS mouthRef to the skin via a single rAF
 //     copy loop that only runs while speaking.
 
-import type { ConversationStore } from '@/lib/conversation'
+import { sttLanguageHint, type ConversationStore } from '@/lib/conversation'
 import type {
   EmotionStore,
   LifecyclePhase,
@@ -201,9 +201,12 @@ export class ConversationOrchestrator {
     this.sttAbort = controller
     let result: SttResult
     try {
+      const settings = this.deps.conversation.getState().settings
       result = await this.deps.transcribe(blob, {
-        mode: this.deps.conversation.getState().settings.sttMode,
-        language: this.deps.language,
+        mode: settings.sttMode,
+        // deps.language is an embedder override; otherwise the settings picker
+        // decides (auto → undefined → per-clip detection).
+        language: this.deps.language ?? sttLanguageHint(settings.sttLanguage),
         signal: controller.signal,
       })
     } catch (err) {

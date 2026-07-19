@@ -19,7 +19,7 @@ import type { ModelInfo } from '@/lib/providers'
 import type { SttMode } from '@/lib/stt'
 import type { TtsEngine } from '@/lib/tts'
 import type { FaceSkinId } from '@/lib/face/skin'
-import type { InputMode } from '@/lib/conversation'
+import type { InputMode, SttLanguage } from '@/lib/conversation'
 import { useConversation, type UseConversation } from '@/lib/use-conversation'
 import {
   brainOptions,
@@ -260,6 +260,20 @@ export function SettingsPanel({
           value={settings.sttMode}
           onChange={(v) => conv.setSttMode(v)}
           options={stt}
+        />
+
+        {/* Voice language ---------------------------------------------------
+            Whisper's per-clip auto-detect misreads accented speech (accented
+            English → Portuguese). Pinning fixes it; Auto stays the default. */}
+        <Segmented<SttLanguage>
+          title="VOICE LANGUAGE"
+          value={settings.sttLanguage}
+          onChange={(v) => conv.setSttLanguage(v)}
+          options={[
+            { value: 'auto', label: 'Auto' },
+            { value: 'en', label: 'English' },
+            { value: 'pt', label: 'Português' },
+          ]}
         />
 
         {/* TTS engine ------------------------------------------------------- */}

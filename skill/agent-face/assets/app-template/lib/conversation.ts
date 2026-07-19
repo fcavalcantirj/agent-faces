@@ -58,6 +58,20 @@ export const DEFAULT_STT_MODE: SttMode = 'auto'
 export const DEFAULT_TTS_ENGINE: TtsEngine = 'web-speech'
 export const DEFAULT_FACE_SKIN: FaceSkinId = 'eidolon'
 
+/**
+ * Transcription language. Whisper's per-clip auto-detect misreads accented
+ * speech (accented English → Portuguese phonetic soup, seen live 2026-07-19),
+ * so the user can pin it. Extend the union as more languages are needed.
+ */
+export type SttLanguage = 'auto' | 'en' | 'pt'
+export const STT_LANGUAGES: readonly SttLanguage[] = ['auto', 'en', 'pt']
+export const DEFAULT_STT_LANGUAGE: SttLanguage = 'auto'
+
+/** The hint actually sent to STT: `auto` means "send nothing, let it detect". */
+export function sttLanguageHint(language: SttLanguage): string | undefined {
+  return language === 'auto' ? undefined : language
+}
+
 /** Which brain is currently selected. `null` = not chosen yet. */
 export interface ConversationSettings {
   provider: string | null
@@ -66,6 +80,8 @@ export interface ConversationSettings {
   inputMode: InputMode
   /** Speech-to-text path: browser Whisper, hosted, or auto. */
   sttMode: SttMode
+  /** Transcription language pin (auto = per-clip detection). */
+  sttLanguage: SttLanguage
   /** Voice-out engine: Web Speech, OpenAI, or local Kokoro. */
   ttsEngine: TtsEngine
   /** Which face renderer drives the visuals. */
@@ -136,6 +152,8 @@ export interface ConversationStore {
   setInputMode(mode: InputMode): void
   /** Set the speech-to-text path (browser | hosted | auto). */
   setSttMode(mode: SttMode): void
+  /** Pin the transcription language (auto = per-clip detection). */
+  setSttLanguage(language: SttLanguage): void
   /** Set the voice-out engine (web-speech | openai | kokoro). */
   setTtsEngine(engine: TtsEngine): void
   /** Set the face renderer skin (eidolon | talkinghead). */
@@ -172,9 +190,17 @@ function emptySettings(): ConversationSettings {
     model: null,
     inputMode: DEFAULT_INPUT_MODE,
     sttMode: DEFAULT_STT_MODE,
+    sttLanguage: DEFAULT_STT_LANGUAGE,
     ttsEngine: DEFAULT_TTS_ENGINE,
     faceSkin: DEFAULT_FACE_SKIN,
   }
+}
+
+/** Coerce a persisted value to a valid SttLanguage (defaulting missing/garbage). */
+function normalizeSttLanguage(value: unknown): SttLanguage {
+  return (STT_LANGUAGES as readonly unknown[]).includes(value)
+    ? (value as SttLanguage)
+    : DEFAULT_STT_LANGUAGE
 }
 
 /** Coerce a persisted value to a valid InputMode (defaulting missing/garbage). */
@@ -242,6 +268,7 @@ function loadPersisted(
     model: typeof blob.settings?.model === 'string' ? blob.settings.model : null,
     inputMode: normalizeInputMode(blob.settings?.inputMode),
     sttMode: normalizeSttMode(blob.settings?.sttMode),
+    sttLanguage: normalizeSttLanguage(blob.settings?.sttLanguage),
     ttsEngine: normalizeTtsEngine(blob.settings?.ttsEngine),
     faceSkin: normalizeFaceSkin(blob.settings?.faceSkin),
   }
@@ -391,6 +418,10 @@ export function createConversationStore(
       commit(state.turns, { settings: { ...state.settings, inputMode: mode } })
     },
 
+    setSttLanguage(language) {
+      if (language === state.settings.sttLanguage) return
+      commit(state.turns, { settings: { ...state.settings, sttLanguage: language } })
+    },
     setSttMode(mode) {
       if (mode === state.settings.sttMode) return
       commit(state.turns, { settings: { ...state.settings, sttMode: mode } })

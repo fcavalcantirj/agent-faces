@@ -117,6 +117,41 @@ describe('conversation orchestrator', () => {
     emotion = createEmotionStore()
   })
 
+  it('passes the settings voice language to STT (auto → undefined; deps override wins)', async () => {
+    const seenLanguages: Array<string | undefined> = []
+    const transcribe: TranscribeFn = async (_blob, opts) => {
+      seenLanguages.push(opts?.language)
+      return { text: 'oi', engine: 'hosted' }
+    }
+
+    const orch = createOrchestrator({
+      conversation,
+      emotion,
+      tts: makeFakeTts().tts,
+      transcribe,
+      runChat: makeFakeChat().runChat,
+    })
+
+    conversation.setSttLanguage('pt')
+    await orch.submitAudio(new Blob(['a']))
+    conversation.setSttLanguage('auto')
+    await orch.submitAudio(new Blob(['b']))
+    expect(seenLanguages).toEqual(['pt', undefined])
+
+    // An explicit deps.language (embedder override) beats the settings picker.
+    const pinned = createOrchestrator({
+      conversation,
+      emotion,
+      tts: makeFakeTts().tts,
+      transcribe,
+      runChat: makeFakeChat().runChat,
+      language: 'en',
+    })
+    conversation.setSttLanguage('pt')
+    await pinned.submitAudio(new Blob(['c']))
+    expect(seenLanguages).toEqual(['pt', undefined, 'en'])
+  })
+
   it('runs a full spoken turn: transcribe → chat → speak → lip-sync → rest', async () => {
     const chat = makeFakeChat()
     const tts = makeFakeTts()
