@@ -2679,3 +2679,30 @@ real answer, file content verified on disk. Before the fix the same request was 
 +9.4s.
 UAT: [backend] Felipe: ask for a build by voice — you should HEAR the ack while it works, then
 the answer.
+
+2026-07-19: [frontend] DETERMINISTIC SPEECH FLUSH — Felipe's second live report on the mute-
+while-working problem, and the real root cause at last. The bridge ack WAS arriving on the wire
+(+4.5s, previously verified) but was not always HEARD: the speech pipeline is incremental,
+except splitSentences only treats .!? as a boundary when FOLLOWED BY WHITESPACE — so a short
+phrase that ends the buffer right before the stream goes quiet ("Sure!" / "On it.") strands in
+`rest` and is only spoken by the done tail-flush, i.e. AFTER the tool work. Compounding irony:
+the persona nudge made the model sometimes ack by itself, which suppressed the synthetic
+bridge ack (sawDelta) and then STRANDED ITS OWN ACK. Explicit "answer first" requests produced
+multi-sentence lead-ins whose INTERNAL boundaries flushed — which is why only those worked.
+FIX (lib/chat/client.ts only; splitSentences untouched): a gap-based flush in the runChat
+stream loop. After each delta, one timer is armed: buffer ends with a terminator ->
+SENTENCE_GAP_FLUSH_MS (350ms — decimals safe, the next token re-arms in ms); otherwise ->
+STALL_FLUSH_MS (1500ms — a stall means tool work; speak the clause). The flush forces the
+boundary with the trailing-newline trick chunkForSpeech already uses, never speaks a half-open
+[[face: directive, clears on done/error/abort, and empties the buffer so the done flush cannot
+re-speak. Anything the agent says is now SPOKEN within ~1.5s of arriving, no matter what
+follows.
+TDD: 4 gap-flush tests with gated SSE chunks + fake timers (terminator gap, non-terminated
+stall, decimal re-arm, half-directive hold); RED 2/14 -> GREEN 14/14; existing incremental pins
+unchanged.
+Verify (all RUN, $? captured directly): npm test EXIT=0; eslint/typecheck EXIT=0;
+PLAYWRIGHT_PORT=3100 playwright EXIT=0 (15 passed — emotion.spec streams typed turns through
+this exact path); sync-template run; npm run verify EXIT=0 (6/6).
+UAT: [frontend] Felipe by voice, NO special phrasing: ask for a build; the ack (model's own or
+synthetic) must be HEARD within ~1-2s of work starting, then the answer after. His ears are
+the gate.

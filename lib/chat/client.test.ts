@@ -6,7 +6,7 @@
 // sentence chunking, directive stripping, lifecycle callbacks, and barge-in are
 // all exercised against controllable streams.
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   streamChat,
   runChat,
@@ -170,6 +170,115 @@ describe('streamChat', () => {
 })
 
 // --- runChat (driver: callbacks, chunking, directives, barge-in) ------------
+
+/** A gate the test opens to release the next SSE chunk (thunk-chunk helper). */
+function gate(): { open: () => void; p: Promise<void> } {
+  let open!: () => void
+  const p = new Promise<void>((resolve) => {
+    open = resolve
+  })
+  return { open, p }
+}
+
+describe('runChat gap flush (deterministic speech — 2026-07-19 live finding)', () => {
+  // A short phrase before tool work ("On it.") used to strand in the buffer
+  // until `done` — i.e. until 30-60s of silent agent work finished — because a
+  // terminator only splits when FOLLOWED by whitespace. After a real stream
+  // gap, whatever is buffered must be spoken NOW.
+  it('speaks a terminal-punctuated buffer after a short gap, BEFORE done', async () => {
+    vi.useFakeTimers()
+    try {
+      const g = gate()
+      const fetchImpl = makeFetch([delta('On it.'), async () => (await g.p, doneFrame('stop'))])
+      const log: string[] = []
+      const session = runChat(
+        { ...REQ, fetchImpl },
+        { onSentence: (s) => log.push(`sentence:${s}`), onDone: () => log.push('done') },
+      )
+      await vi.advanceTimersByTimeAsync(400) // > SENTENCE_GAP_FLUSH_MS
+      expect(log).toContain('sentence:On it.')
+      expect(log).not.toContain('done')
+      g.open()
+      await session.done
+      expect(log.indexOf('sentence:On it.')).toBeLessThan(log.indexOf('done'))
+      expect(log.filter((l) => l.startsWith('sentence:'))).toHaveLength(1) // no re-speak at done
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('speaks a NON-terminated clause after a long stall, BEFORE done', async () => {
+    vi.useFakeTimers()
+    try {
+      const g = gate()
+      const fetchImpl = makeFetch([
+        delta('Creating the file now'),
+        async () => (await g.p, doneFrame('stop')),
+      ])
+      const log: string[] = []
+      const session = runChat(
+        { ...REQ, fetchImpl },
+        { onSentence: (s) => log.push(`sentence:${s}`), onDone: () => log.push('done') },
+      )
+      await vi.advanceTimersByTimeAsync(400) // below the stall threshold: still quiet
+      expect(log).toHaveLength(0)
+      await vi.advanceTimersByTimeAsync(1200) // past STALL_FLUSH_MS
+      expect(log).toContain('sentence:Creating the file now')
+      g.open()
+      await session.done
+      expect(log.indexOf('sentence:Creating the file now')).toBeLessThan(log.indexOf('done'))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a quick next delta re-arms the timer — decimals never split', async () => {
+    vi.useFakeTimers()
+    try {
+      const g2 = gate()
+      const g3 = gate()
+      const fetchImpl = makeFetch([
+        delta('pi is 3.'),
+        async () => (await g2.p, delta('14 exactly. ')),
+        async () => (await g3.p, doneFrame('stop')),
+      ])
+      const sentences: string[] = []
+      const session = runChat({ ...REQ, fetchImpl }, { onSentence: (s) => sentences.push(s) })
+      await vi.advanceTimersByTimeAsync(50) // well inside the gap window
+      g2.open()
+      await vi.advanceTimersByTimeAsync(1)
+      g3.open()
+      await session.done
+      expect(sentences).toEqual(['pi is 3.14 exactly.'])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('never speaks a half-open face directive; done still strips it', async () => {
+    vi.useFakeTimers()
+    try {
+      const g = gate()
+      const fetchImpl = makeFetch([
+        delta('Done![[face:ha'),
+        async () => (await g.p, delta('ppy]]') + doneFrame('stop')),
+      ])
+      const log: string[] = []
+      const session = runChat(
+        { ...REQ, fetchImpl },
+        { onSentence: (s) => log.push(`sentence:${s}`), onDone: () => log.push('done') },
+      )
+      await vi.advanceTimersByTimeAsync(2000) // past every flush tier
+      expect(log).toHaveLength(0) // holding: a partial [[face: must never be spoken
+      g.open()
+      const result = await session.done
+      expect(log).toEqual(['sentence:Done!', 'done'])
+      expect(result.emotion).toBe('happy')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
 
 describe('runChat', () => {
   it('fires lifecycle callbacks and dispatches complete sentences to TTS incrementally', async () => {

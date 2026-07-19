@@ -197,6 +197,15 @@ export function splitSentences(text: string): { sentences: string[]; rest: strin
 
 // --- runChat (driver) -------------------------------------------------------
 
+/** Stream silence (ms) after which a buffered COMPLETE sentence is spoken.
+ * Short: only a token gap separates it from being spoken; decimals like "3."
+ * are safe because their next delta arrives in milliseconds and re-arms. */
+export const SENTENCE_GAP_FLUSH_MS = 350
+/** Stream silence (ms) after which even a clause with NO terminator is spoken —
+ * a long stall means the agent went off to do tool work; a talking face must
+ * not sit on words it already has (live finding, 2026-07-19). */
+export const STALL_FLUSH_MS = 1500
+
 /** Options for the `runChat` driver — `signal` is an OPTIONAL external abort. */
 export interface RunChatOptions {
   provider: string
@@ -208,6 +217,8 @@ export interface RunChatOptions {
   fetchImpl?: typeof fetch
   /** An external signal to also abort on (in addition to the internal one). */
   signal?: AbortSignal
+  /** Gap-flush tuning override (tests). Defaults to the exported constants. */
+  flushDelays?: { sentenceGapMs?: number; stallMs?: number }
 }
 
 /** Lifecycle callbacks the orchestrator wires to emotion + TTS. */
@@ -277,6 +288,42 @@ export function runChat(
   let buffer = ''
   let firstToken = false
 
+  // DETERMINISTIC SPEECH FLUSH. The splitter's followed-by-whitespace rule is
+  // right for an uninterrupted stream, but it strands a phrase that ends the
+  // buffer right before the stream goes quiet — "On it." followed by a minute
+  // of silent tool work was only spoken at `done`. After a real gap, whatever
+  // is buffered is spoken NOW (a trailing newline forces the boundary — the
+  // same trick chunkForSpeech uses). A half-open [[face: directive is the one
+  // thing never spoken; the done-flush strips it as always.
+  const sentenceGapMs = opts.flushDelays?.sentenceGapMs ?? SENTENCE_GAP_FLUSH_MS
+  const stallMs = opts.flushDelays?.stallMs ?? STALL_FLUSH_MS
+  let flushTimer: ReturnType<typeof setTimeout> | null = null
+  const clearFlushTimer = () => {
+    if (flushTimer !== null) {
+      clearTimeout(flushTimer)
+      flushTimer = null
+    }
+  }
+  const flushBufferedSpeech = () => {
+    flushTimer = null
+    if (settled || controller.signal.aborted) return
+    const pending = buffer
+    if (!pending.trim()) return
+    if (/\[\[[^\]]*$/.test(pending)) return // never speak a half-open directive
+    buffer = ''
+    const { sentences } = splitSentences(`${pending}\n`)
+    for (const sentence of sentences) {
+      const { text } = parseFaceDirective(sentence)
+      if (text) callbacks.onSentence?.(text)
+    }
+  }
+  const armFlushTimer = () => {
+    clearFlushTimer()
+    if (!buffer.trim()) return
+    const ms = /[.!?]["')\]]?\s*$/.test(buffer) ? sentenceGapMs : stallMs
+    flushTimer = setTimeout(flushBufferedSpeech, ms)
+  }
+
   const settle = (partial: Partial<ChatResult>): ChatResult => {
     const { emotion, text } = restingEmotionForReply(raw)
     const result: ChatResult = {
@@ -334,8 +381,11 @@ export function runChat(
           const { text } = parseFaceDirective(sentence)
           if (text) callbacks.onSentence?.(text)
         }
+        armFlushTimer()
       }
+      clearFlushTimer()
     } catch (err) {
+      clearFlushTimer()
       const adapterErr = err instanceof AdapterError ? err : normalizeError(err, opts.provider)
       // A barge-in is not an error: swallow it and settle as aborted.
       if (adapterErr.code === 'aborted' || controller.signal.aborted) {
@@ -349,6 +399,7 @@ export function runChat(
 
     // Broke out because of barge-in — stop; do NOT flush the queued tail to TTS.
     if (controller.signal.aborted) {
+      clearFlushTimer()
       void iterator.return?.(undefined as unknown as StreamDone).catch(() => {})
       settle({ aborted: true })
       return
