@@ -71,6 +71,11 @@ const config = [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
       ],
+      // Upstream (eslint-plugin-react-hooks recommended) ships exhaustive-deps
+      // at "warn" — this repo wants teeth: a stale dependency array is a real
+      // bug (a handler closing over dead state), not a style nit. The sanctioned
+      // escape hatch stays a commented eslint-disable naming the omitted dep.
+      "react-hooks/exhaustive-deps": "error",
     },
   },
 
@@ -93,14 +98,15 @@ const config = [
     // still fails on new unused vars, syntax errors and import violations.
     // Tracked as its own prd.json task — RESTORE THESE TO "error" as that task
     // lands, rule by rule. Do not let this block become permanent furniture.
+    // RESTORED so far (2026-07-19): use-memo + exhaustive-deps (lazy useState
+    // in kokoro-status/stt-status; exhaustive-deps now explicitly "error" in
+    // the first-party block above, because upstream only ships "warn").
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "react-hooks/refs": "warn",
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/purity": "warn",
       "react-hooks/immutability": "warn",
-      "react-hooks/use-memo": "warn",
-      "react-hooks/exhaustive-deps": "warn",
     },
   },
 ];

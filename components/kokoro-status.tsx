@@ -15,7 +15,7 @@
 // primitives stay behind the injected controller so the logic is fully
 // unit-tested without a Worker.
 
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   createKokoroController,
   estimateKokoroSizeMb,
@@ -34,7 +34,10 @@ export function useKokoroStatus(
   controllerFactory: () => KokoroController = () =>
     createKokoroController({ createWorker: spawnKokoroWorker }),
 ) {
-  const controller = useMemo(controllerFactory, [])
+  // Lazy useState, not useMemo: React may DROP a useMemo cache and re-run the
+  // factory mid-life (a second live controller while the effect still owns the
+  // first); a lazy state initializer is create-exactly-once by contract.
+  const [controller] = useState(controllerFactory)
 
   const state = useSyncExternalStore(
     (cb) => controller.subscribe(cb),
