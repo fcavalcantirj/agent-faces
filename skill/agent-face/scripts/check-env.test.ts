@@ -7,6 +7,8 @@
 
 import { describe, it, expect } from "vitest";
 import { spawnSync } from "node:child_process";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
@@ -22,10 +24,16 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(HERE, "check-env.mjs");
 
 // Run the script with ONLY the given vars (plus PATH) so the host machine's
-// real ANTHROPIC_API_KEY etc. can never bleed into the "no keys" case.
+// real ANTHROPIC_API_KEY etc. can never bleed into the "no keys" case — and
+// from an EMPTY temp cwd, because check-env reads ./.env.local by default and
+// the developer's real .env.local (e.g. a configured agent bridge) would
+// otherwise flip the "no keys" case to a configured one. Found the day a real
+// .env.local first existed on a dev machine.
+const EMPTY_DIR = mkdtempSync(join(tmpdir(), "check-env-hermetic-"));
 function run(vars: Record<string, string> = {}, args: string[] = []) {
   return spawnSync("node", [SCRIPT, ...args], {
     encoding: "utf8",
+    cwd: EMPTY_DIR,
     env: { PATH: process.env.PATH ?? "", ...vars } as unknown as NodeJS.ProcessEnv,
   });
 }

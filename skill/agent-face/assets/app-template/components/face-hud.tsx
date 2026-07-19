@@ -48,7 +48,9 @@ export function FaceHud({
             {subtitle}
           </span>
         </div>
-        <div className="flex items-center gap-2 pt-1">
+        {/* mr clears the settings gear (absolute right-4/md:right-6 in page.tsx)
+            so LINK ACTIVE sits fully LEFT of it — they overlapped before. */}
+        <div className="mr-10 flex items-center gap-2 pt-1 md:mr-12">
           <span
             className="h-1.5 w-1.5 animate-pulse rounded-full"
             style={{ backgroundColor: meta.hex }}

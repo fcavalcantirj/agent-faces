@@ -2550,3 +2550,30 @@ confirming zero metered usage on the billing page.
 Verify (all RUN, $? captured directly): guard EXIT=1 with key present; healthz {"ok":true};
 two live completions + one live SSE stream EXIT=0 with correct frames; lsof port check 0 after
 shutdown.
+
+2026-07-19: [frontend] UI polish from the FIRST REAL CONVERSATION (Felipe talked to the face —
+in Portuguese — via the Agent SDK bridge; his screenshots drove three fixes, his decisions via
+explicit questions): (1) the bottom talk/type cluster moved from centered-over-the-chin to
+BOTTOM-RIGHT (w-72, mirrors the transcript panel; all e2e-load-bearing strings unchanged);
+(2) LINK ACTIVE now ends LEFT of the settings gear (mr-10/md:mr-12 on the FaceHud status
+cluster — they genuinely overlapped, gear is absolutely positioned over the header flow);
+(3) NEW one-tap SPEAK FREELY toggle bottom-left: tap = setInputMode('hands-free') + start
+listening in one gesture; tap again = setInputMode('push-to-talk') and the #65 input-mode store
+subscription does the VAD pause + listening reset (no duplicated teardown); disabled with the
+capability hint when voice-in is unavailable; drives the SAME store as the settings Segmented so
+they cannot disagree. First placement (mid-left top-1/2) COLLIDED with the STATE readout — the
+readout renders mid-left, not bottom-left as assumed; caught by screenshot, moved to bottom-24
+left-4 mirroring the right cluster.
+NEW E2E: smoke asserts the toggle visible + a full click-through (tap -> aria-pressed true +
+TAP TO STOP; tap again -> released), exercising the store-subscription un-toggle path in a real
+browser; degradation zero-keys asserts the toggle is VISIBLE but deliberately NOT disabled —
+in-browser Whisper is the zero-key voice path, so zero keys does not kill voice-in.
+HERMETIC-TEST FIX RIDING ALONG: creating a real .env.local (bridge wiring) broke
+check-env.test.ts — its spawned check-env.mjs reads ./.env.local from cwd, so the "no keys"
+case saw a configured brain on any dev machine with a real config. run() now spawns from an
+empty temp dir, extending the helper's own clean-env discipline to the filesystem.
+Verify (all RUN, $? captured directly): npx eslint . EXIT=0; npm run typecheck EXIT=0; npm test
+EXIT=0 (515); PLAYWRIGHT_PORT=3100 npx playwright test EXIT=0 (15 passed — 14 prior + the new
+toggle test); sync-template run; npm run verify EXIT=0 (6/6); before/after screenshots taken,
+layout visually confirmed (face unobstructed, no overlaps).
+UAT: [frontend] Felipe eyeballs the live page and the SPEAK FREELY flow with a real mic.

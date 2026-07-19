@@ -73,6 +73,10 @@ test("boots with zero keys: face renders, no uncaught errors", async ({ page }) 
   expect(box?.width ?? 0).toBeGreaterThan(0);
   expect(box?.height ?? 0).toBeGreaterThan(0);
 
+  // The speak-freely toggle exists even with zero keys — voice-in's zero-key
+  // path is in-browser Whisper, so it is NOT asserted disabled here.
+  await expect(page.getByRole("button", { name: /SPEAK FREELY/ })).toBeVisible();
+
   // Uncaught exceptions are never acceptable — this one is a hard gate.
   expect(errors.pageErrors, `uncaught: ${errors.pageErrors.join(" | ")}`).toHaveLength(0);
   expect(

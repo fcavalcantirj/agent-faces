@@ -41,7 +41,7 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [draft, setDraft] = useState('')
 
-  const { turns, state } = useConversation()
+  const { turns, state, setInputMode } = useConversation()
   const { emotion, setEmotion } = useEmotion()
   const {
     status,
@@ -158,9 +158,39 @@ export default function Home() {
         </div>
       ) : null}
 
-      {/* Bottom control bar: Talk + text input + interrupt. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-24 z-40 flex flex-col items-center gap-3 px-4">
-        <div className="pointer-events-auto flex w-full max-w-md items-center gap-2">
+      {/* Fast hands-free: one tap switches to hands-free AND starts listening;
+          tap again returns to push-to-talk (the input-mode store subscription in
+          use-orchestrator pauses the VAD and resets `listening` — no duplicate
+          teardown here). Mirrors the settings INPUT control through the same
+          store, so the two can never disagree. */}
+      <button
+        type="button"
+        aria-pressed={handsFree && listening}
+        disabled={!matrix.voiceIn.available}
+        title={matrix.voiceIn.available ? undefined : matrix.voiceIn.message}
+        onClick={() => {
+          if (!matrix.voiceIn.available) return
+          if (handsFree && listening) {
+            setInputMode('push-to-talk')
+          } else if (handsFree) {
+            toggleHandsFree()
+          } else {
+            setInputMode('hands-free')
+            toggleHandsFree()
+          }
+        }}
+        className={`pointer-events-auto absolute bottom-24 left-4 z-40 select-none rounded-sm border px-3 py-2 font-mono text-[10px] tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-40 md:left-6 ${
+          handsFree && listening
+            ? 'border-accent bg-accent/20 text-accent'
+            : 'border-border/60 text-muted-foreground hover:border-accent hover:text-foreground'
+        }`}
+      >
+        {handsFree && listening ? 'SPEAK FREELY — TAP TO STOP' : 'SPEAK FREELY'}
+      </button>
+
+      {/* Control cluster — bottom-RIGHT so nothing sits on top of the face. */}
+      <div className="pointer-events-none absolute bottom-24 right-4 z-40 flex w-72 flex-col gap-2 md:right-6">
+        <div className="pointer-events-auto flex w-full items-center gap-2">
           <button
             type="button"
             aria-pressed={handsFree ? listening : status.phase === 'listening'}
@@ -195,7 +225,7 @@ export default function Home() {
 
         <form
           onSubmit={submitDraft}
-          className="pointer-events-auto flex w-full max-w-md items-center gap-2"
+          className="pointer-events-auto flex w-full items-center gap-2"
         >
           <input
             type="text"

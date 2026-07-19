@@ -19,6 +19,27 @@ test("dev server boots and the app renders", async ({ page }) => {
   await expect(page.getByPlaceholder("…or type a message")).toBeVisible();
   await expect(page.getByRole("button", { name: "SEND" })).toBeVisible();
   await expect(page.getByLabel("Open settings")).toBeVisible();
+  await expect(page.getByRole("button", { name: /SPEAK FREELY/ })).toBeVisible();
+});
+
+test("the speak-freely toggle flips hands-free listening on and off", async ({ page }) => {
+  await page.goto("/");
+  const toggle = page.getByRole("button", { name: /SPEAK FREELY/ });
+  await expect(toggle).toBeVisible();
+  // Same gating as the talk button — voice-in is available in this environment
+  // (fake mic + browser Whisper), which stt.spec already relies on.
+  await expect(toggle).toBeEnabled();
+
+  // One tap: hands-free mode AND listening, in a single gesture.
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveText(/TAP TO STOP/);
+
+  // Tap again: back to push-to-talk; the input-mode store subscription resets
+  // the listening flag (the un-toggle path exercises that seam end to end).
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await expect(toggle).toHaveText(/^SPEAK FREELY$/);
 });
 
 test("cross-origin isolation headers are served and take effect", async ({ page }) => {
