@@ -8,7 +8,7 @@
 // degrades to EIDOLON with a console warning (see resolveSkinId) rather than
 // crashing.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import { createEidolonSkin } from '@/components/skins/eidolon-skin'
 import { createTalkingHeadSkin, isTalkingHeadAvailable } from '@/components/skins/talkinghead-skin'
 import {
@@ -43,8 +43,9 @@ export function FaceSkinHost({
   className,
 }: FaceSkinHostProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const onReadyRef = useRef(onReady)
-  onReadyRef.current = onReady
+  // Effect Event: reads the LATEST onReady when fired without making the mount
+  // effect depend on it (a new callback prop must not remount the skin).
+  const fireReady = useEffectEvent((skin: FaceSkin) => onReady?.(skin))
 
   useEffect(() => {
     const el = containerRef.current
@@ -56,7 +57,7 @@ export function FaceSkinHost({
 
     let disposed = false
     Promise.resolve(skin.mount(el)).then(() => {
-      if (!disposed) onReadyRef.current?.(skin)
+      if (!disposed) fireReady(skin)
     })
 
     return () => {

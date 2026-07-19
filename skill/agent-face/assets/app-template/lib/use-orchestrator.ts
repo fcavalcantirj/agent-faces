@@ -20,7 +20,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
 } from 'react'
@@ -150,9 +149,15 @@ export interface UseOrchestrator {
  * (mic, VAD, STT, chat, TTS) and re-renders on FSM status changes.
  */
 export function useOrchestrator(): UseOrchestrator {
-  const rigRef = useRef<OrchestratorRig | null>(null)
-  if (rigRef.current === null) rigRef.current = buildRig()
-  const rig = rigRef.current
+  // Lazy STATE, not a lazily-initialized ref: the rig is legitimately used
+  // DURING render (useSyncExternalStore subscribes to it, the memoized handlers
+  // close over it), and render-time ref reads are not stable under concurrent
+  // rendering. useState is the sanctioned render-safe home for a create-once
+  // instance. Known cost: dev-only StrictMode double-invokes the initializer,
+  // building one discarded rig whose only live side effect is an inert
+  // emotion-store subscription (its faceSkin stays null; mic/VAD/workers are
+  // only acquired in start()/init(), which the discarded copy never reaches).
+  const [rig] = useState(buildRig)
 
   const conversation = getConversationStore()
   const inputMode = useSyncExternalStore(

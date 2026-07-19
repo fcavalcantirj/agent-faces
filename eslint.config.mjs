@@ -100,10 +100,10 @@ const config = [
     // lands, rule by rule. Do not let this block become permanent furniture.
     // RESTORED so far (2026-07-19): use-memo + exhaustive-deps (lazy useState
     // in kokoro-status/stt-status; exhaustive-deps now explicitly "error" in
-    // the first-party block above, because upstream only ships "warn").
+    // the first-party block above, because upstream only ships "warn");
+    // refs (face-skin → useEffectEvent, use-orchestrator → lazy useState).
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
-      "react-hooks/refs": "warn",
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/purity": "warn",
       "react-hooks/immutability": "warn",
