@@ -9,8 +9,8 @@ The face is stateless UI; its **brain** is pluggable behind one seam:
   face to an agent you already run, reusing its memory, tools, and persona.
 
 Every variable below is **server-side only** and matches
-[`../../../.env.example`](../../../.env.example) and
-[`../../../docs/env-contract.md`](../../../docs/env-contract.md) exactly. Keep
+[`../assets/app-template/.env.example`](../assets/app-template/.env.example)
+(the canonical copy packaged with this skill) exactly. Keep
 the three consistent.
 
 ---

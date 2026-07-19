@@ -34,6 +34,31 @@ lip-sync (`wawa-lipsync`).
 > face's brain can be a fresh hosted API **or your own already-running agent** —
 > hosted on Vercel, or self-hosted on your VPS right next to the agent.
 
+## One command (quickstart)
+
+Prerequisites: Node 20+ and npm. Then, from the directory that holds the app
+(the claude-faces repo root, or a freshly scaffolded app):
+
+```bash
+node skill/agent-face/scripts/start.mjs      # options: --port 3100 --yolo --stop
+```
+
+It installs missing dependencies on first run (app AND bridge), frees the
+ports, starts the local **agent bridge** if the checkout ships one (the
+claude-faces repo does, under `bridge/`; the packaged app template
+deliberately does not — see `bridge/README.md` for why), wires `.env.local`,
+starts the dev server, and opens the face in your browser. **No bridge and no
+keys still opens a working face** — voice in/out run entirely in the browser;
+a brain (key or bridge) is only needed for intelligent replies. `--stop`
+tears the whole stack down.
+
+Starting from nothing instead of a checkout? Scaffold first, then start:
+
+```bash
+node skill/agent-face/scripts/scaffold.mjs ./agent-face-app
+node skill/agent-face/scripts/start.mjs ./agent-face-app
+```
+
 ---
 
 ## When to use this skill
@@ -41,7 +66,8 @@ lip-sync (`wawa-lipsync`).
 Use it when the user asks to:
 
 - **"give my agent a face"** / **"put a face on Hermes/openclaw"** — attach a
-  talking, animated face to an agent they already run (Mode B).
+  talking, animated face to an agent they already run (Mode B — "bring your own
+  agent"; the modes are defined under **Two brain modes** below).
 - **"talk to my agent by voice"** / **"I want to talk to it and see it
   lip-sync"** — a hands-free or push-to-talk voice loop with a lip-synced mouth.
 - **"deploy a face UI"** / **"deploy a voice face to Vercel"** — scaffold and
@@ -59,12 +85,19 @@ full should-trigger / should-not-trigger list.
 ## Overview
 
 The face is **stateless UI**; its **brain** is pluggable behind one `/api/chat`
-seam. Everything runs with **zero keys** (in-browser Whisper for speech-to-text,
+seam. **Zero keys still gets you a working face**: the particles render, the
+mic transcribes (in-browser Whisper — the first "talk" downloads the model, so
+give it a moment), and voice-out speaks via the browser. What zero keys does
+NOT get you is an intelligent *reply* — that needs a brain: one hosted key
+**or** your own running agent. (`check-env.mjs` exiting 1 means "no brain
+yet", not "broken".) Everything runs with **zero keys** (in-browser Whisper
+for speech-to-text,
 the browser Web Speech API for speech-out); adding a key or wiring a running
 agent unlocks hosted models and higher-fidelity FFT lip-sync.
 
 - **Voice in:** in-browser Whisper (WebGPU + WASM fallback) by default; hosted
-  fallback via Groq or OpenAI. Push-to-talk or hands-free VAD.
+  fallback via Groq or OpenAI. Push-to-talk or hands-free VAD
+  (voice-activity detection — the mic listens continuously, no button).
 - **Voice out:** browser Web Speech API (zero infra) → upgrade to streamed
   OpenAI `gpt-4o-mini-tts` for real FFT-driven lip-sync (or all-local Kokoro on
   WebGPU).
@@ -89,6 +122,19 @@ The one thing to decide first: **where does the reply come from?**
   nanoclaw**, a **local Claude Code bridge**, or **Ollama** — reusing that
   agent's memory, tools, and persona instead of a stateless call. Reachable on
   localhost / self-host directly, or from Vercel via a public HTTPS tunnel.
+
+**Wiring your own Claude Code agent (the North-Star case), in full:** this
+uses the `bridge/` server at the claude-faces **repo root** — deliberately
+outside this skill's app template (offering claude.ai login to third parties
+needs Anthropic approval; running YOUR OWN agent on your own machine is fine).
+`start.mjs` does all of this automatically when `bridge/` is present; by hand:
+
+```bash
+cd bridge && npm install && npm start        # 127.0.0.1:8787
+# in the app's .env.local:
+AGENT_BRIDGE_KIND=claude-code
+AGENT_BRIDGE_URL=http://127.0.0.1:8787
+```
 
 Full contract, per-kind wiring, and env names:
 [`references/backends.md`](references/backends.md). Every key is server-side
@@ -156,7 +202,8 @@ the user's answer to step 4:
 node skill/agent-face/scripts/deploy.mjs --target vercel      # hosted on Vercel
 
 # They said "self-host":
-node skill/agent-face/scripts/deploy.mjs --target self-host   # Docker image for your VPS
+node skill/agent-face/scripts/deploy.mjs --target self-host           # next build for your VPS
+node skill/agent-face/scripts/deploy.mjs --target self-host --docker  # …as a Docker image
 ```
 
 **After-deploy verification** — once the deploy prints a URL:
@@ -221,6 +268,9 @@ Load these only when you need the detail:
 | [`references/deploy.md`](references/deploy.md) | Deploying to Vercel or self-hosting with Docker next to your agent |
 | [`references/portability.md`](references/portability.md) | Running the skill on a non-Claude harness |
 | [`references/evaluations.md`](references/evaluations.md) | Confirming when this skill should (and should not) trigger |
+| [`references/voice.md`](references/voice.md) | Voice in/out details — STT engines, TTS engines, env knobs |
+| [`references/face.md`](references/face.md) | The particle face, emotions, and `[[face:…]]` directives |
+| [`references/troubleshooting.md`](references/troubleshooting.md) | "Pressed talk, nothing happened" and every other stall |
 
 ---
 

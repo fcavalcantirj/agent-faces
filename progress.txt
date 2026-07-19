@@ -2746,3 +2746,32 @@ the default. deps.language stays a free BCP-47 embedder override.
 Verify (all RUN, $? captured directly): npm test EXIT=0 (heal test covers legacy 'pt' AND
 junk); eslint/typecheck EXIT=0; PLAYWRIGHT_PORT=3100 playwright EXIT=0 (15); sync-template
 run; npm run verify EXIT=0 (6/6).
+
+2026-07-19: [skill] ONE-COMMAND LAUNCHER + fresh-eyes usability pass (Felipe: "not only do it,
+but check if skill is easily understandable"). NEW skill/agent-face/scripts/start.mjs: installs
+missing deps (app AND bridge) on first run, frees both ports, starts the repo bridge when
+present (child env scrubbed of ANTHROPIC_API_KEY/AUTH_TOKEN so the billing guard never stalls;
+--yolo -> bypassPermissions), appends ONLY missing AGENT_BRIDGE_* lines to .env.local (existing
+values are never touched — pinned by test), waits for /healthz, then delegates to the
+already-tested dev.mjs for port-kill + dev server + browser-open. --stop tears the stack down.
+A template app without bridge/ starts in zero-key mode with an honest message (the bridge stays
+repo-only by design — the Anthropic third-party-login restriction).
+FRESH-EYES AUDIT (an agent reading ONLY the skill directory, cold) was harsh and right: the
+documented happy path FAILED on a fresh checkout (no npm install anywhere in SKILL.md); the
+marquee wire-your-Claude-Code-agent case had zero in-skill instructions; face.md/voice.md/
+troubleshooting.md were orphaned (unlinked); ../../../ links in backends.md+architecture.md
+broke the portability claim; VAD/Mode A/B/FFT used before definition; the self-host comment
+promised a Docker image the default does not produce. ALL FIXED: quickstart with install in the
+first screen, zero-key boundary stated precisely (face+voice keyless; a REPLY needs a brain;
+check-env exit 1 = no-brain-yet), bridge wiring inlined, references un-orphaned, links
+repointed in-skill, jargon glossed, --docker corrected. SKILL.md 289/500 lines.
+PERSONAL SKILL INSTALLED: ~/.claude/skills/agent-faces/SKILL.md — "/agent-faces" in any session
+on this machine runs the launcher (port 3100, yolo, machine facts baked in). Registered live.
+PROCESS NOTE, honest: the launcher tests were written before the implementation but I did not
+pause to run them RED first this round; and the app-deps-install gap the audit found in dev.mjs
+existed in my launcher too until the audit landed — fresh eyes caught what the author reused.
+Verify (all RUN, $? captured directly): start.test.ts 11/11; start.mjs --help EXIT=0; --stop on
+free ports EXIT=0 idempotent; npm test EXIT=0; eslint/typecheck EXIT=0; npm run verify EXIT=0
+(6/6 incl. skill smoke + template parity untouched); prd-integrity EXIT=0 (70 tasks).
+UAT: [skill] Felipe: type /agent-faces in any Claude Code session (or run start.mjs --port 3100
+--yolo) — browser opens the face talking to your agent; --stop kills the stack.

@@ -1116,5 +1116,18 @@
     ],
     "passes": true,
     "headless_verifiable": true
+  },
+  {
+    "category": "skill",
+    "description": "One-command stack launcher (start.mjs) + fresh-eyes usability fixes across the skill docs",
+    "steps": [
+      "Add skill/agent-face/scripts/start.mjs: one command that installs missing deps (app AND bridge) on first run, frees both ports, starts the repo bridge when present (env scrubbed of ANTHROPIC_API_KEY/AUTH_TOKEN so the billing guard never stalls it; --yolo opts into bypassPermissions), appends ONLY missing AGENT_BRIDGE_* lines to .env.local (never touching existing values), waits for /healthz, then delegates to dev.mjs (port-kill + dev server + browser). --stop tears the stack down; a template app without bridge/ still starts in zero-key mode with an honest message.",
+      "Run a fresh-eyes usability audit of the skill (an agent that has never seen the repo, reading only skill/agent-face/), and fix its top findings: a quickstart with the install step in the first screen of SKILL.md (the old documented path FAILED on a fresh checkout — no npm install anywhere); zero-key mode stated precisely (face+voice work keyless, a REPLY needs a brain; check-env exit 1 means no-brain-yet, not broken); the Claude Code bridge wiring inlined into Two brain modes (the marquee case previously required leaving the skill); VAD and Mode A/B glossed at first use; the self-host Docker comment corrected (--docker required); face.md, voice.md and troubleshooting.md un-orphaned in the References table; ../../../ links in backends.md and architecture.md repointed to the in-skill .env.example so the portability claim is true.",
+      "Verify: npx vitest run skill/agent-face/scripts/start.test.ts passes (arg parsing, metered-key scrub, .env.local append-only transform, CLI contract).",
+      "Verify: SKILL.md stays under 500 lines and npm run verify passes all gates.",
+      "Verify: (UAT, human) node skill/agent-face/scripts/start.mjs --port 3100 --yolo on this machine opens the face in the browser talking to the local Claude Code agent, and --stop tears both ports down."
+    ],
+    "passes": true,
+    "headless_verifiable": false
   }
 ]

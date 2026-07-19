@@ -4,7 +4,8 @@ How the pieces fit: the voice loop, the deploy boundary, the security model, and
 the repo layout. This is the map for anyone extending the app or wiring a new
 brain. For the brain contract specifically, see
 [`backends.md`](backends.md); for the exact env variables, see
-[`../../../docs/env-contract.md`](../../../docs/env-contract.md).
+[`../assets/app-template/.env.example`](../assets/app-template/.env.example)
+(the canonical copy packaged with this skill).
 
 ---
 
