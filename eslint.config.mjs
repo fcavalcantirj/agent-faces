@@ -101,12 +101,12 @@ const config = [
     // RESTORED so far (2026-07-19): use-memo + exhaustive-deps (lazy useState
     // in kokoro-status/stt-status; exhaustive-deps now explicitly "error" in
     // the first-party block above, because upstream only ships "warn");
-    // refs (face-skin → useEffectEvent, use-orchestrator → lazy useState).
+    // refs (face-skin → useEffectEvent, use-orchestrator → lazy useState);
+    // purity + immutability (agent-face: sim moved into a ref, created in the
+    // emotion effect; Dust uses a seeded PRNG so its render memo is idempotent).
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/immutability": "warn",
     },
   },
 ];

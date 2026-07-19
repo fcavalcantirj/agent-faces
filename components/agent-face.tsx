@@ -31,6 +31,49 @@ export interface MouthState {
  */
 export type MouthSource = 'analyser' | 'estimated' | 'off'
 
+/** Mutable simulation state for the particle face (lives in a ref; the 60fps
+ * loop mutates it in place so the component NEVER re-renders per frame). */
+interface SimState {
+  current: Float32Array
+  currentColors: Float32Array
+  targetPos: Float32Array
+  targetCol: Float32Array
+  display: Float32Array
+  phase: Float32Array
+  speed: Float32Array
+  nextBlink: number
+  blinkT: number
+}
+
+/** Build the sim. Module scope on purpose: the per-particle wobble phase/speed
+ * use real randomness, so this must run from an effect, never during render. */
+function createSim(): SimState {
+  const initial = buildTargets('neutral')
+  return {
+    current: Float32Array.from(initial.positions),
+    currentColors: Float32Array.from(initial.colors),
+    targetPos: initial.positions,
+    targetCol: initial.colors,
+    display: new Float32Array(TOTAL * 3),
+    phase: Float32Array.from({ length: TOTAL }, () => Math.random() * Math.PI * 2),
+    speed: Float32Array.from({ length: TOTAL }, () => 0.6 + Math.random() * 1.2),
+    nextBlink: 2.5,
+    blinkT: -1,
+  }
+}
+
+/** Tiny deterministic PRNG (mulberry32) for decorative render-time layouts:
+ * a render memo must be idempotent, and the dust doesn't need true entropy. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = Math.imul(a ^ (a >>> 15), a | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 // Soft round particle sprite generated in-memory
 function makeSprite(): THREE.Texture {
   const size = 64
@@ -65,31 +108,34 @@ function ParticleFace({
 
   const sprite = useMemo(() => makeSprite(), [])
 
-  // Mutable simulation state
-  const sim = useMemo(() => {
+  // Mutable simulation state lives in a REF — the render pass never reads or
+  // writes it, so the compiler's purity/immutability contracts hold while the
+  // frame loop keeps mutating in place (zero allocations, zero re-renders).
+  const simRef = useRef<SimState | null>(null)
+
+  // Pure render-time seed for the initial buffer attributes; the first frame
+  // overwrites both via copyArray, and memoized args keep r3f from rebuilding
+  // the attribute on unrelated re-renders.
+  const seed = useMemo(() => {
     const initial = buildTargets('neutral')
     return {
-      current: Float32Array.from(initial.positions),
-      currentColors: Float32Array.from(initial.colors),
-      targetPos: initial.positions,
-      targetCol: initial.colors,
-      display: new Float32Array(TOTAL * 3),
-      phase: Float32Array.from({ length: TOTAL }, () => Math.random() * Math.PI * 2),
-      speed: Float32Array.from({ length: TOTAL }, () => 0.6 + Math.random() * 1.2),
-      nextBlink: 2.5,
-      blinkT: -1,
+      positions: Float32Array.from(initial.positions),
+      colors: Float32Array.from(initial.colors),
     }
   }, [])
 
   const emotionRef = useRef<Emotion>(emotion)
   useEffect(() => {
     emotionRef.current = emotion
+    const sim = (simRef.current ??= createSim()) // lazy init in an effect: sanctioned
     const t = buildTargets(emotion)
     sim.targetPos = t.positions
     sim.targetCol = t.colors
-  }, [emotion, sim])
+  }, [emotion])
 
   useFrame((state, delta) => {
+    const sim = simRef.current
+    if (!sim) return // the emotion effect runs before the first frame; guard the race
     const t = state.clock.elapsedTime
     const em = emotionRef.current
     const k = Math.min(delta * 3.2, 1)
@@ -201,8 +247,8 @@ function ParticleFace({
     <group ref={groupRef}>
       <points ref={pointsRef}>
         <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[Float32Array.from(sim.current), 3]} />
-          <bufferAttribute attach="attributes-color" args={[Float32Array.from(sim.currentColors), 3]} />
+          <bufferAttribute attach="attributes-position" args={[seed.positions, 3]} />
+          <bufferAttribute attach="attributes-color" args={[seed.colors, 3]} />
         </bufferGeometry>
         <pointsMaterial
           size={0.05}
@@ -222,12 +268,13 @@ function ParticleFace({
 function Dust() {
   const ref = useRef<THREE.Points>(null)
   const positions = useMemo(() => {
+    const rand = mulberry32(0xd057) // deterministic: render memos must be idempotent
     const n = 400
     const arr = new Float32Array(n * 3)
     for (let i = 0; i < n; i++) {
-      arr[i * 3] = (Math.random() - 0.5) * 14
-      arr[i * 3 + 1] = (Math.random() - 0.5) * 9
-      arr[i * 3 + 2] = -1.5 - Math.random() * 6
+      arr[i * 3] = (rand() - 0.5) * 14
+      arr[i * 3 + 1] = (rand() - 0.5) * 9
+      arr[i * 3 + 2] = -1.5 - rand() * 6
     }
     return arr
   }, [])
