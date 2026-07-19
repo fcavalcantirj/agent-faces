@@ -104,9 +104,10 @@ export default function Home() {
         <Settings className="h-4 w-4" aria-hidden="true" />
       </button>
 
-      {/* Live transcript panel (updates token-by-token during the stream). */}
+      {/* Live transcript panel (updates token-by-token during the stream) —
+          top-left, its original home, allowed up to half the screen. */}
       {turns.length > 0 ? (
-        <div className="pointer-events-none absolute left-4 top-20 z-30 flex max-h-[40vh] w-72 flex-col gap-2 overflow-y-auto font-mono text-xs md:left-6">
+        <div className="pointer-events-none absolute left-4 top-20 z-30 flex max-h-[50vh] w-72 flex-col gap-2 overflow-y-auto font-mono text-xs md:left-6">
           {turns.slice(-6).map((t) => (
             <div
               key={t.id}
@@ -179,12 +180,20 @@ export default function Home() {
             toggleHandsFree()
           }
         }}
-        className={`pointer-events-auto absolute bottom-24 left-4 z-40 select-none rounded-sm border px-3 py-2 font-mono text-[10px] tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-40 md:left-6 ${
+        className={`pointer-events-auto absolute bottom-24 left-4 z-40 flex select-none items-center gap-2 rounded-sm border px-3 py-2 font-mono text-[10px] tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-40 md:left-6 ${
           handsFree && listening
             ? 'border-accent bg-accent/20 text-accent'
             : 'border-border/60 text-muted-foreground hover:border-accent hover:text-foreground'
         }`}
       >
+        {/* The LINK ACTIVE idiom: a small pulsing accent dot makes the pill
+            findable at a glance without breaking the quiet look & feel. */}
+        <span
+          aria-hidden="true"
+          className={`h-1.5 w-1.5 rounded-full ${
+            handsFree && listening ? 'bg-accent' : 'animate-pulse bg-accent/80'
+          }`}
+        />
         {handsFree && listening ? 'SPEAK FREELY — TAP TO STOP' : 'SPEAK FREELY'}
       </button>
 

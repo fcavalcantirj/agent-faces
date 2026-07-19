@@ -37,7 +37,7 @@ export function FaceHud({
   }, [onEmotionChange])
 
   return (
-    <div className="pointer-events-none absolute inset-0 flex flex-col justify-between font-mono">
+    <div className="pointer-events-none absolute inset-0 flex flex-col font-mono">
       {/* top bar */}
       <header className="flex items-start justify-between border-b border-border/60 px-4 py-3 md:px-6">
         <div className="flex flex-col gap-0.5">
@@ -49,8 +49,9 @@ export function FaceHud({
           </span>
         </div>
         {/* mr clears the settings gear (absolute right-4/md:right-6 in page.tsx)
-            so LINK ACTIVE sits fully LEFT of it — they overlapped before. */}
-        <div className="mr-10 flex items-center gap-2 pt-1 md:mr-12">
+            so LINK ACTIVE sits fully LEFT of it — they overlapped before. pt
+            centers the label on the gear's vertical midline (gear: top-3 + p-2). */}
+        <div className="mr-10 flex items-center gap-2 pt-2.5 md:mr-12">
           <span
             className="h-1.5 w-1.5 animate-pulse rounded-full"
             style={{ backgroundColor: meta.hex }}
@@ -62,8 +63,11 @@ export function FaceHud({
         </div>
       </header>
 
-      {/* side readouts */}
-      <div className="flex items-end justify-between px-4 pb-3 md:px-6">
+      {/* side readouts — TOP-RIGHT under the header, mirroring the transcript
+          panel top-left; the bottom corners belong to SPEAK FREELY (left) and
+          the control cluster (right). */}
+      <div className="flex justify-end px-4 pt-4 md:px-6">
+        <div className="flex flex-col gap-2">
         <dl className="flex flex-col gap-1 text-[10px] tracking-wider text-muted-foreground">
           <div className="flex gap-2">
             <dt className="w-20 text-muted-foreground/60">STATE</dt>
@@ -88,17 +92,20 @@ export function FaceHud({
             </div>
           ) : null}
         </dl>
-        <p className="hidden text-right text-[10px] leading-relaxed tracking-wider text-muted-foreground/60 md:block">
+        {/* Lives under the readout now — its old bottom-right corner belongs
+            to the control cluster. */}
+        <p className="hidden text-[10px] leading-relaxed tracking-wider text-muted-foreground/60 md:block">
           DRAG TO ORBIT
           <br />
           KEYS 1&ndash;0 / Q / W TO SWITCH STATE
         </p>
+        </div>
       </div>
 
       {/* emotion controls */}
       <nav
         aria-label="Emotion states"
-        className="pointer-events-auto flex flex-wrap justify-center gap-1 border-t border-border/60 px-2 py-3 md:gap-2"
+        className="pointer-events-auto mt-auto flex flex-wrap justify-center gap-1 border-t border-border/60 px-2 py-3 md:gap-2"
       >
         {EMOTIONS.map((em) => {
           const m = EMOTION_META[em]

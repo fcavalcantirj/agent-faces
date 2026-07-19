@@ -2577,3 +2577,18 @@ EXIT=0 (515); PLAYWRIGHT_PORT=3100 npx playwright test EXIT=0 (15 passed — 14 
 toggle test); sync-template run; npm run verify EXIT=0 (6/6); before/after screenshots taken,
 layout visually confirmed (face unobstructed, no overlaps).
 UAT: [frontend] Felipe eyeballs the live page and the SPEAK FREELY flow with a real mic.
+
+2026-07-19: [frontend] Layout iteration WITH Felipe live at the keyboard (his screenshots, his
+calls, four rounds): FOUR-CORNER LAYOUT. Transcript back at its original TOP-LEFT home, now
+allowed max-h-[50vh] (an intermediate move of it into the control cluster broke an e2e and was
+reverted before commit — his redirect and the gate agreed). STATE/SIGNAL readout block moved
+from mid-left to TOP-RIGHT under the header (his mid-turn call), with the DRAG TO ORBIT / KEYS
+hints tucked beneath it; the emotion dock re-pinned to the bottom via mt-auto. SPEAK FREELY got
+the LINK ACTIVE idiom — a small pulsing accent dot (pulse when idle, solid when lit) — visible
+without breaking the quiet look. LINK ACTIVE vertically centered on the settings gear
+(pt-1 -> pt-2.5; it sat visibly high). Corners now: transcript TL, readouts TR, SPEAK FREELY BL,
+talk/type controls BR, dock bottom, face untouched in the middle.
+Verify (all RUN, $? captured directly): npx eslint . EXIT=0; npm run typecheck EXIT=0; npm test
+EXIT=0 (515); PLAYWRIGHT_PORT=3100 npx playwright test EXIT=0 (15 passed); sync-template run;
+npm run verify EXIT=0 (6/6); screenshot per round, layout confirmed each time.
+UAT: [frontend] Felipe is live-driving the app — his eyes are the gate.
