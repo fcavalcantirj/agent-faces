@@ -251,6 +251,7 @@ All scripts are harness-agnostic Node ESM — plain `node`, no external deps.
 | `scripts/dev.mjs` | Free the dev port (kills only this app's own previous server; foreign holders are refused unless `--take-port`), start dev, open the browser |
 | `scripts/check-env.mjs` | Report which brains / STT / TTS are configured (secrets masked) |
 | `scripts/deploy.mjs` | Deploy to Vercel or build the self-host image |
+| `scripts/hermes-serve.mjs` | Stand up a Hermes `api_server` for Mode B — never touches your live gateway |
 
 Run any of them with `--help` for options.
 

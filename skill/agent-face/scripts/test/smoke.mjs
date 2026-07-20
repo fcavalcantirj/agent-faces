@@ -45,6 +45,7 @@ const CHECK_ENV = join(SCRIPTS, "check-env.mjs");
 const DEV = join(SCRIPTS, "dev.mjs");
 const DEPLOY = join(SCRIPTS, "deploy.mjs");
 const START = join(SCRIPTS, "start.mjs");
+const HERMES_SERVE = join(SCRIPTS, "hermes-serve.mjs");
 
 // ---------------------------------------------------------------------------
 // Tiny assertion + temp-dir bookkeeping (no framework).
@@ -332,6 +333,51 @@ function testStartCli() {
   check("start rejects an unknown flag non-zero", r.status !== 0, `exit ${r.status}`);
 }
 
+async function testHermesServe() {
+  console.log("hermes-serve.mjs (CLI contract + fake bracket — a real Hermes needs a live rig)");
+
+  let r = runNode([HERMES_SERVE, "--help"]);
+  check("hermes-serve --help exits 0", r.status === 0, `exit ${r.status}`);
+  check(
+    "help names kind=hermes, --cmd and the gateway promise",
+    /hermes/i.test(r.out) && /--cmd/.test(r.out) && /gateway/i.test(r.out),
+  );
+
+  // Hermetic fail-fast: node-only PATH so a real `hermes` binary (dasbrow's
+  // Pi runs this suite!) can't turn the no-entrypoint path into a launch.
+  const nodeOnlyPath = `${dirname(process.execPath)}:/usr/bin:/bin`;
+  r = runNode([HERMES_SERVE, "--port", "8643"], {
+    env: cleanEnv({ PATH: nodeOnlyPath, HERMES_SERVE_CMD: "" }),
+  });
+  check("hermes-serve fails fast (exit 2) with no entrypoint", r.status === 2, `exit ${r.status}`);
+  check("fail-fast names --cmd", /--cmd/.test(r.out));
+
+  // The bracket with a FAKE server: spawn, health, env lines, --stop teardown.
+  const dir = mkTmp("smoke-hermes-serve-");
+  const port = await getFreePort();
+  const fake = `node -e "require('http').createServer((q,s)=>s.end('ok')).listen(${port},'127.0.0.1')"`;
+  const serve = spawn(
+    process.execPath,
+    [HERMES_SERVE, "--port", String(port), "--cmd", fake, "--key", "smoke-key"],
+    { cwd: dir, stdio: "ignore" },
+  );
+  try {
+    const up = await waitUntil(() => canConnect(port), 10000);
+    check("fake api_server answers through the bracket", up, `port ${port}`);
+
+    const stop = runNode([HERMES_SERVE, "--stop", "--port", String(port)], { cwd: dir });
+    check("hermes-serve --stop exits 0", stop.status === 0, `exit ${stop.status}`);
+    const cleared = await waitUntil(async () => !(await canConnect(port)), 8000);
+    check("hermes-serve --stop actually tore the server down", cleared, `port ${port}`);
+  } finally {
+    try {
+      serve.kill("SIGKILL");
+    } catch {
+      // already gone
+    }
+  }
+}
+
 function testDeployPreflight(completeAppDir) {
   console.log("deploy.mjs (preflight + vercel-absent hint)");
 
@@ -383,6 +429,8 @@ async function main() {
     await testDevKillLogic();
     console.log("");
     testStartCli();
+    console.log("");
+    await testHermesServe();
     console.log("");
     testDeployPreflight(completeAppDir);
   } catch (err) {

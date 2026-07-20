@@ -51,7 +51,7 @@ extracted standalone.
 
 ---
 
-## The five scripts (all plain `node`)
+## The six scripts (all plain `node`)
 
 | Script | One-line purpose | Runs standalone? |
 |---|---|---|
@@ -60,6 +60,7 @@ extracted standalone.
 | `scripts/dev.mjs` | Free the dev port (SIGTERM→SIGKILL a prior server of THIS app; foreign holders are refused unless `--take-port`), start dev, open the browser | ✅ `node dev.mjs [--port N] [--no-open] [--take-port]` |
 | `scripts/check-env.mjs` | Report which brains / STT / TTS are configured (secrets masked) | ✅ `node check-env.mjs [--json]` |
 | `scripts/deploy.mjs` | Deploy to Vercel or build the self-host image | ✅ `node deploy.mjs --target vercel|self-host` |
+| `scripts/hermes-serve.mjs` | Stand up a Hermes `api_server` (dedicated profile) for Mode B; never touches a live gateway | ✅ `node hermes-serve.mjs [--port N] [--cmd "<cmd>"]` |
 
 Every one accepts `--help` and exits 0 with usage — the portable probe any
 harness can run first.

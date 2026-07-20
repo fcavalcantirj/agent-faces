@@ -59,6 +59,7 @@ under any harness with plain `node`):
 | `node skill/agent-face/scripts/dev.mjs` | Free the dev port (kills only this app's own previous server; `--take-port` for foreign holders), then start dev + open the browser |
 | `node skill/agent-face/scripts/check-env.mjs` | Report which brains/STT/TTS are configured (secrets masked) |
 | `node skill/agent-face/scripts/deploy.mjs --target vercel\|self-host` | Deploy to Vercel or build the self-host image |
+| `node skill/agent-face/scripts/hermes-serve.mjs` | Stand up a Hermes `api_server` for Mode B (never touches a live gateway) |
 | `node skill/agent-face/scripts/sync-template.mjs [--check]` | Regenerate (or verify parity of) the packaged app template |
 
 Each skill script supports `--help`. To test them locally under a plain runtime, run

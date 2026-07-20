@@ -41,3 +41,6 @@ npm-debug.log*
 
 # stray playwright screenshot from the README/demo instructions
 out.png
+
+# hermes-serve runtime pidfiles
+.hermes-serve-*.pid

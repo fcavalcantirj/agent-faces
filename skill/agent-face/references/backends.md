@@ -121,6 +121,38 @@ Every key is optional; no missing key hard-fails the UI.
 The bridge reuses the agent's own memory/tools — you are not resending a system
 prompt for a stateful agent, you are talking to the agent you already run.
 
+### `hermes`: standing up the api_server
+
+Hermes' api_server is an **in-process gateway platform** — there is no separate
+daemon. It is enabled by env (`API_SERVER_ENABLED=true`, a **mandatory**
+`API_SERVER_KEY`, `API_SERVER_PORT` default `8642`, `API_SERVER_HOST` default
+`127.0.0.1`) and speaks OpenAI-compatible `POST /v1/chat/completions` with
+`Authorization: Bearer <key>`, plus `GET /health`. Two ways to get one:
+
+- **Shared memory (the real "answers as me"):** add `API_SERVER_ENABLED=true` +
+  `API_SERVER_KEY=<key>` to your **running** gateway's `~/.hermes/.env` and
+  restart that gateway once — Telegram/etc. and the api_server then run in the
+  same process, sharing the agent's memory and sessions. (Do NOT start a second
+  gateway on the same profile; the pid lock will refuse.)
+- **Zero downtime (fresh instance):** a **dedicated-profile** gateway —
+  `hermes -p api gateway run` with the `API_SERVER_*` vars set. Same persona
+  and config, but its **own memory**. The skill wraps this pattern:
+
+```bash
+node skill/agent-face/scripts/hermes-serve.mjs            # :8642, profile "api"
+node skill/agent-face/scripts/hermes-serve.mjs --stop     # tear it down
+# no `hermes` on PATH? full override:
+node skill/agent-face/scripts/hermes-serve.mjs --cmd "<your launch command>"
+```
+
+`hermes-serve` injects the `API_SERVER_*` env (generating a key if you don't
+pass `--key`), health-waits, prints the exact `.env.local` lines
+(`AGENT_BRIDGE_KIND=hermes`, `HERMES_API_BASE_URL`, `HERMES_API_KEY`), and
+**never touches your live gateway** — it refuses to spawn onto an
+already-answering port and only ever launches a non-default profile. Remote
+face? `API_SERVER_HOST` defaults to loopback — tunnel or bind wider yourself,
+deliberately.
+
 ### `claude-code`: the local Agent SDK bridge
 
 The agent-faces repo ships a ready-made local bridge for this kind at

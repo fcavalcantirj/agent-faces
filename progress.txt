@@ -2953,3 +2953,27 @@ holder now exits 3 with ss/lsof instructions instead of lying. guard.findPids in
 tests. dev.mjs trimmed back under the 500-line rule (497).
 Verify (all RUN, $? captured directly): new invisible-holder test RED->GREEN (12/12);
 npm run verify EXIT=0; npm run verify:linux EXIT=0.
+
+2026-07-20: [skill] NEW hermes-serve.mjs — Mode B for Hermes users without touching their
+live gateway (dasbrow's proposal, Felipe: "if its good for skill, wont break, plan and do
+it"). RESEARCH FIRST (NousResearch/hermes-agent docs+source, found-in-docs confidence): the
+api_server is an IN-PROCESS gateway platform — no standalone daemon exists; enabled via env
+(API_SERVER_ENABLED, MANDATORY API_SERVER_KEY, port default 8642); the no-downtime pattern
+is a DEDICATED-PROFILE gateway (hermes -p api gateway run; per-profile pid locks protect the
+live one); CAVEAT honestly documented: a dedicated-profile gateway is a FRESH agent instance
+(own memory) — true answers-as-me needs api_server enabled in the RUNNING gateway + one
+restart. hermes-serve.mjs (311 lines): resolves launch cmd (--cmd | HERMES_SERVE_CMD |
+hermes -p <profile> gateway run — NEVER the default profile, that's the live agent), injects
+API_SERVER_* env (key auto-generated), reuse path when the port already answers (never kills
+a maybe-gateway), pidfile + process-group teardown (--stop, Ctrl-C), prints the three
+.env.local lines. Fail-fast exit 2 with --cmd hint when hermes absent (deploy.mjs/Vercel-CLI
+degradation pattern). backends.md gained the full hermes section (both recipes + the memory
+caveat); script-table rows in SKILL.md/portability.md/CONTRIBUTING/README; pidfiles
+gitignored. One implementation race caught by the RED suite itself: --stop's unlink vs the
+foreground parent's exit-handler unlink (ENOENT -> exit 1) — guarded.
+Verify (all RUN, $? captured directly): hermes-serve.test.ts 12/12 (incl. fake-server
+bracket e2e + reuse path + never-default-profile assertion); smoke +7 checks EXIT=0
+(PATH-stripped so a real hermes binary on the rig can't flip the fail-fast case); npm test
+EXIT=0; npm run verify EXIT=0 (after one typecheck fix); npm run verify:linux EXIT=0.
+UAT: [skill] real-Hermes run is dasbrow's rig (arm64 Pi): helper + kind=hermes + the
+"who are you" diff. Its results pin/adjust the default invocation if needed.
