@@ -1,6 +1,6 @@
 # Development guide
 
-How the **Claude Faces** repo is laid out and where different kinds of work belong. Read this
+How the **Agent Faces** repo is laid out and where different kinds of work belong. Read this
 before your first change; for setup, scripts, style, and the PR workflow see
 [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scaffold.mjs — copy the packaged Agent Face app template into a target dir.
+// scaffold.mjs — copy the packaged Agent Faces app template into a target dir.
 //
 // This is the FIRST script a host agent runs to "give itself a face": it
 // materializes the self-contained web app (assets/app-template/) into a
@@ -41,7 +41,7 @@ const SKIP_SEGMENTS = new Set(["node_modules", ".next", ".vercel", "coverage"]);
 
 function help() {
   console.log(
-    `scaffold.mjs — copy the Agent Face app template into a target directory.
+    `scaffold.mjs — copy the Agent Faces app template into a target directory.
 
 Usage:
   node scaffold.mjs [target] [options]
@@ -137,7 +137,7 @@ function main() {
     },
   });
 
-  console.log(`✓ Scaffolded Agent Face into:\n    ${target}\n`);
+  console.log(`✓ Scaffolded Agent Faces into:\n    ${target}\n`);
 
   if (opts.install) {
     console.log("Running npm install …\n");

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// smoke.mjs — dependency-free smoke tests for the Agent Face skill scripts.
+// smoke.mjs — dependency-free smoke tests for the Agent Faces skill scripts.
 //
 // This exercises the SAFE paths of every skill script without a test framework,
 // a browser, a real `next dev`, or a network deploy — so it runs anywhere Node
@@ -359,7 +359,7 @@ function testDeployPreflight(completeAppDir) {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Agent Face skill — script smoke tests\n");
+  console.log("Agent Faces skill — script smoke tests\n");
   try {
     const completeAppDir = await testScaffold();
     console.log("");

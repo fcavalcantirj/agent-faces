@@ -1,12 +1,15 @@
-# Claude Faces 🗣️😃
+# Agent Faces 🗣️😃
+
+[![CI](https://github.com/fcavalcantirj/claude-faces/actions/workflows/ci.yml/badge.svg)](https://github.com/fcavalcantirj/claude-faces/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Give your agent a face.** Talk to it out loud, hear it answer, and watch an animated face lip-sync in real time.
 
-Claude Faces is a **portable Agent Skill** + a **Next.js web app**. Install the skill on any skill-pattern agent (Claude Code, Hermes, openclaw, trustclaw, nanoclaw…), and it scaffolds, runs, and deploys a voice+face front end. You speak → [OpenAI Whisper](https://github.com/openai/whisper) transcribes → your chosen **brain** replies → the reply is spoken back and drives a 12-emotion particle face.
+Agent Faces is a **portable Agent Skill** + a **Next.js web app**. Install the skill on any skill-pattern agent (Claude Code, Hermes, openclaw, trustclaw, nanoclaw…), and it scaffolds, runs, and deploys a voice+face front end. You speak → [OpenAI Whisper](https://github.com/openai/whisper) transcribes → your chosen **brain** replies → the reply is spoken back and drives a 12-emotion particle face.
 
 > **The north star:** *install the skill on an agent → boom, it has a face.* The face's brain can be a fresh API **or your own already-running agent** — hosted on Vercel, or self-hosted on your own VPS right next to the agent.
 
-![Claude Faces hero](public/screenshots/hero.png)
+![Agent Faces demo — 12-emotion particle face](public/screenshots/demo.gif)
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/fcavalcantirj/claude-faces&env=ANTHROPIC_API_KEY,OPENROUTER_API_KEY,GROQ_API_KEY,OPENAI_API_KEY&envDescription=All%20optional%20%E2%80%94%20the%20app%20falls%20back%20to%20browser%20Whisper%20%2B%20Web%20Speech%20if%20none%20are%20set&envLink=https://github.com/fcavalcantirj/claude-faces/blob/main/skill/agent-face/references/backends.md&project-name=claude-faces&repository-name=claude-faces)
 
@@ -103,14 +106,19 @@ Browser (Next.js on Vercel CDN, or self-hosted next to your agent)
 
 Deep dive: [`skill/agent-face/references/architecture.md`](skill/agent-face/references/architecture.md).
 
+![Agent Faces hero](public/screenshots/hero.png)
 ![Talking](public/screenshots/talking.png)
 
 ---
 
 ## Status
 
-This repo currently ships the **build plan** — [`prd.json`](prd.json), a 58-task requisites list (frontend, backend, skill, docs, infra) that drives building the app. Contributions welcome once scaffolding lands; see [`CONTRIBUTING.md`](CONTRIBUTING.md) (and [`docs/development.md`](docs/development.md) for the repo layout).
+**The app works.** Everything above is implemented: the particle face, both brain modes, browser + hosted STT/TTS, real audio-driven lip-sync, hands-free voice, the portable skill, and the one-command launcher (`node skill/agent-face/scripts/start.mjs`). Six CI gates (lint, typecheck, unit tests + coverage, build, skill smoke tests, app-template parity) plus a Playwright browser e2e suite guard `main`. Contributions welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) (and [`docs/development.md`](docs/development.md) for the repo layout).
+
+## How this was built
+
+Most of this repo was built **autonomously, overnight**, by a loop of stateless coding-agent runs. [`prd.json`](prd.json) is the 70-task ledger that drove it; [`progress.txt`](progress.txt) is the agents' append-only build journal (their durable memory between runs); `ralph.sh` / `ralph-continuous.sh` are the loop drivers. Each iteration did exactly one task test-first, ran that task's own verification, journaled, committed, and stopped. The harness files stay in the repo on purpose — they're the story, and they still work: `./progress.sh` prints the ledger state any time.
 
 ## License
 
-MIT
+[MIT](LICENSE)

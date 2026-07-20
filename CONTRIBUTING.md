@@ -1,6 +1,6 @@
-# Contributing to Claude Faces
+# Contributing to Agent Faces
 
-Thanks for helping build **Claude Faces** — a portable Agent Skill + Next.js web app that
+Thanks for helping build **Agent Faces** — a portable Agent Skill + Next.js web app that
 gives an AI agent a talking, lip-syncing face. This guide covers local setup, the scripts,
 the code-style bar, and the one rule that trips people up most: **keep the packaged skill
 template in sync with the app**.
@@ -79,7 +79,7 @@ MCP tool. `npm run test:skill` exercises them end-to-end.
 - **Reuse, don't reinvent** — the EIDOLON particle-face source is vendored at
   `reference/fugu-face/`; port from there rather than rewriting.
 - **Frontmatter name rule** — `SKILL.md`'s `name:` must not contain `claude` or `anthropic`
-  (reserved). Use `name: agent-face`. The repo/brand is still "Claude Faces".
+  (reserved). Use `name: agent-face`. The repo/brand is still "Agent Faces".
 
 ---
 
@@ -116,15 +116,16 @@ blocks the merge. Never edit `assets/app-template/` by hand — edit the root ap
    npm run test:skill
    ```
 4. Open a PR against `main` with a clear description.
-5. **CI must pass.** The GitHub Actions workflow runs these checks by name, and all are required:
+5. **CI must pass.** The GitHub Actions workflow runs `npm run verify`, which gates on six
+   checks (same names as the local run):
+   - **lint** — `npm run lint`
    - **typecheck** — `npm run typecheck`
+   - **unit tests + coverage** — `npm test` with coverage thresholds
    - **build** — `npm run build`
-   - **skill-lint** — asserts `SKILL.md` frontmatter `name` has no `claude`/`anthropic` and the
-     description is non-empty
-   - **template parity** — `node skill/agent-face/scripts/sync-template.mjs --check`
-   - **portability** — greps `skill/agent-face/scripts` for harness-coupled references and fails
-     on any match
-   - **test:skill** — `npm run test:skill`
+   - **skill smoke tests** — `npm run test:skill`
+   - **app-template parity** — `node skill/agent-face/scripts/sync-template.mjs --check`
+
+   A separate CI job runs the Playwright browser e2e suite.
 
 A PR that fails any of these will not be merged. Run the same commands locally first to keep the
 loop fast.

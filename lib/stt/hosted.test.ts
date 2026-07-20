@@ -114,7 +114,7 @@ describe('transcribeHosted', () => {
       OPENAI_API_KEY: 'sk-fake',
       OPENAI_TRANSCRIBE_MODEL: 'gpt-4o-transcribe',
       OPENAI_TRANSCRIBE_LANGUAGE: 'en',
-      OPENAI_TRANSCRIBE_PROMPT: 'Claude Faces, wawa-lipsync',
+      OPENAI_TRANSCRIBE_PROMPT: 'Agent Faces, wawa-lipsync',
     }
     const res = await transcribeHosted(transcribeRequest(), { env, fetch: fetchImpl })
     const body = await res.json()
@@ -122,7 +122,7 @@ describe('transcribeHosted', () => {
     const sentForm = calls[0].init.body as FormData
     expect(sentForm.get('model')).toBe('gpt-4o-transcribe')
     expect(sentForm.get('language')).toBe('en')
-    expect(sentForm.get('prompt')).toBe('Claude Faces, wawa-lipsync')
+    expect(sentForm.get('prompt')).toBe('Agent Faces, wawa-lipsync')
   })
 
   it('lets a request language/prompt field override the env default', async () => {

@@ -1,6 +1,6 @@
-# Agent Face — app template
+# Agent Faces — app template
 
-This directory is a **self-contained, deployable snapshot** of the Agent Face
+This directory is a **self-contained, deployable snapshot** of the Agent Faces
 web app, packaged inside the `agent-face` skill. It is what
 `scripts/scaffold.mjs` copies into a target directory.
 

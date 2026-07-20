@@ -1,6 +1,6 @@
 'use client'
 
-// The Claude Faces home screen — the full conversation UI wired around the
+// The Agent Faces home screen — the full conversation UI wired around the
 // orchestrator. It mounts the selected FaceSkin, hands it to the orchestrator to
 // drive, and surfaces the controls for a spoken turn:
 //

@@ -34,7 +34,7 @@ const MODELS_URL = 'https://openrouter.ai/api/v1/models'
  * the OpenRouter dashboard/leaderboards. Non-secret and safe to hard-code.
  */
 const APP_REFERER = 'https://github.com/fcavalcantirj/claude-faces'
-const APP_TITLE = 'Claude Faces'
+const APP_TITLE = 'Agent Faces'
 
 /**
  * Output ceiling for one reply — the face SPEAKS its answer, so replies want to

@@ -5,7 +5,7 @@ injected into every Ralph iteration alongside `README.md`, `prd.json`, and `prog
 
 ## What this project is
 
-**Claude Faces** gives an AI agent a talking, animated, lip-syncing **face**. You speak →
+**Agent Faces** gives an AI agent a talking, animated, lip-syncing **face**. You speak →
 [OpenAI Whisper](https://github.com/openai/whisper) transcribes → a pluggable **brain**
 replies → the reply is spoken back and drives a 12-emotion particle face. It ships as a
 **portable Agent Skill** (`skill/agent-face/`) + a **Next.js web app**, runnable on localhost
@@ -32,7 +32,7 @@ Face = the reused **EIDOLON** particle renderer (12 emotions) with real audio-dr
 - **Match the stack** — Next.js 16 (App Router), React 19, TypeScript, **npm**. Kill any
   previous dev server before starting a new one.
 - **Frontmatter name rule** — the skill's `SKILL.md` `name:` must NOT contain `claude` or
-  `anthropic` (reserved). Use `name: agent-face`. The repo/brand is still "Claude Faces".
+  `anthropic` (reserved). Use `name: agent-face`. The repo/brand is still "Agent Faces".
 
 ## The task ledger — `prd.json`
 

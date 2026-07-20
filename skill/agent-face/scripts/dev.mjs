@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// dev.mjs — start the Agent Face dev server, killing any previous one first.
+// dev.mjs — start the Agent Faces dev server, killing any previous one first.
 //
 // HARD REQUIREMENT (owner's standing rule): before starting a new dev server
 // this script ALWAYS frees the dev port first — SIGTERM, then SIGKILL any
@@ -41,7 +41,7 @@ const DEFAULT_PORT = 3000;
 
 function help() {
   console.log(
-    `dev.mjs — free the dev port, then start the Agent Face dev server.
+    `dev.mjs — free the dev port, then start the Agent Faces dev server.
 
 Usage:
   node dev.mjs [options]

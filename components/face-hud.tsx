@@ -6,7 +6,7 @@ import { EMOTION_META, EMOTIONS, TOTAL, type Emotion } from '@/lib/face-points'
 interface FaceHudProps {
   emotion: Emotion
   onEmotionChange: (emotion: Emotion) => void
-  /** Neutral, configurable HUD title. Defaults to 'AGENT FACE'. */
+  /** Neutral, configurable HUD title. Defaults to 'AGENT FACES'. */
   title?: string
   /** Secondary line under the title. */
   subtitle?: string
@@ -20,7 +20,7 @@ interface FaceHudProps {
 export function FaceHud({
   emotion,
   onEmotionChange,
-  title = 'AGENT FACE',
+  title = 'AGENT FACES',
   subtitle = 'VOICE FACE INTERFACE',
   sttReadout,
 }: FaceHudProps) {

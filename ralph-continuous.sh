@@ -35,7 +35,7 @@ if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] && [ -f "$OPENCLAW_CONFIG" ]; then
   TELEGRAM_BOT_TOKEN=$(jq -r '.channels.telegram.botToken // empty' "$OPENCLAW_CONFIG" 2>/dev/null || echo "")
 fi
 TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-""}
-TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-"152099202"}  # Felipe's Telegram ID
+TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-""}  # set via env; empty = notifications off
 
 send_telegram() {
   local message="$1"
@@ -96,7 +96,7 @@ while true; do
   echo -e "${CYAN}${BOLD}└───────────────────────────────────────────────────────────────────┘${NC}"
   echo ""
 
-  send_telegram "🗣️ *Claude Faces Ralph* - Batch #${batch_count} Starting
+  send_telegram "🗣️ *Agent Faces Ralph* - Batch #${batch_count} Starting
 
 📊 Current: $(./progress.sh)
 🔄 Running ${BATCH_SIZE} iterations..."
@@ -148,14 +148,14 @@ while true; do
     echo ""
 
     if [ -n "$error_detail" ]; then
-      send_telegram "🚨 *Claude Faces Ralph* - API Error
+      send_telegram "🚨 *Agent Faces Ralph* - API Error
 
 ❌ ${error_msg}
 📝 \`${error_detail:0:200}\`
 ⏸️ Pausing ${WAIT_TIME_MINS} min · Resume ${resume_time}
 📊 $(./progress.sh)"
     else
-      send_telegram "🚨 *Claude Faces Ralph* - API Error
+      send_telegram "🚨 *Agent Faces Ralph* - API Error
 
 ❌ ${error_msg}
 ⏸️ Pausing ${WAIT_TIME_MINS} min · Resume ${resume_time}
@@ -177,7 +177,7 @@ while true; do
     echo -e "${GREEN}${BOLD}   ✅ BATCH #${batch_count} done in $(format_time $batch_time) · 📊 $(./progress.sh)${NC}"
     echo ""
 
-    send_telegram "✅ *Claude Faces Ralph* - Batch #${batch_count} Complete
+    send_telegram "✅ *Agent Faces Ralph* - Batch #${batch_count} Complete
 
 ⏱️ $(format_time $batch_time)
 📊 $(./progress.sh)
@@ -204,7 +204,7 @@ while true; do
     echo -e "${GREEN}${BOLD}║   📊 $(./progress.sh)${NC}"
     echo -e "${GREEN}${BOLD}╚═══════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    send_telegram "🎉 *Claude Faces — PRD COMPLETE!* 🎉
+    send_telegram "🎉 *Agent Faces — PRD COMPLETE!* 🎉
 
 📦 Batches: ${batch_count}
 🔄 Iterations: ${total_iterations}

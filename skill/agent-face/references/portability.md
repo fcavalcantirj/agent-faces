@@ -1,4 +1,4 @@
-# Portability — running Agent Face on any harness
+# Portability — running Agent Faces on any harness
 
 `skill/agent-face/` is a **portable Agent Skill** built to the open
 [Agent Skills](https://agentskills.io) standard. It is deliberately
@@ -20,7 +20,7 @@ self-hosted openclaw/nanoclaw process.
 | **No harness coupling** | The scripts import only `node:*` built-ins (`node:fs`, `node:path`, `node:child_process`, `node:net`, `node:url`, `node:process`). No SDK, no MCP client, no `allowed-tools` / `tool_use` machinery. |
 | **No external npm deps to run a script** | `scaffold.mjs`, `dev.mjs`, `check-env.mjs`, and `deploy.mjs` each run under a bare `node` with nothing installed. (The *app they scaffold* has deps; the *skill scripts* do not.) |
 | **Open frontmatter subset** | `SKILL.md` frontmatter uses only the portable/open keys `name`, `description`, `version`, `license`. Anything harness- or brand-specific (`brand`, `category`, `package-manager`) lives under `metadata:` so a stricter harness can ignore it safely. |
-| **Reserved-name rule** | `name: agent-face` — the skill name contains neither `claude` nor `anthropic` (both reserved). The product brand "Claude Faces" lives only in `metadata.brand`. |
+| **Reserved-name rule** | `name: agent-face` — the skill name contains neither `claude` nor `anthropic` (both reserved). The product brand "Agent Faces" lives only in `metadata.brand`. |
 | **Plain-runtime invocation** | Every script supports `--help` and exits 0 under a bare `node`, so a harness can probe it with no arguments and no dependencies. |
 
 > Note on the word "Claude": the skill *mentions* Anthropic/Claude as a **brain

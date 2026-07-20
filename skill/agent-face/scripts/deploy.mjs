@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// deploy.mjs — deploy the Agent Face app to Vercel or build a self-host image.
+// deploy.mjs — deploy the Agent Faces app to Vercel or build a self-host image.
 //
 // One script, two targets, the same preflight:
 //
@@ -55,7 +55,7 @@ const PROVIDER_ENV_VARS = [
 
 function help() {
   console.log(
-    `deploy.mjs — deploy Agent Face to Vercel or build a self-host image.
+    `deploy.mjs — deploy Agent Faces to Vercel or build a self-host image.
 
 Usage:
   node deploy.mjs [options]
@@ -268,7 +268,7 @@ function main() {
     console.error(
       `✗ Preflight failed — required app file(s) missing under:\n    ${appDir}\n` +
         missing.map((f) => `    - ${f}`).join("\n") +
-        `\n  Run this from a scaffolded Agent Face app (see scaffold.mjs).`,
+        `\n  Run this from a scaffolded Agent Faces app (see scaffold.mjs).`,
     );
     process.exit(1);
   }

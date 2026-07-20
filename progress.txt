@@ -2834,3 +2834,29 @@ LIVE: foreign decoy on 3100 -> start.mjs exit 3, decoy survives, bridge tears do
 stop_exit=0 ports empty every round; .env.local sha256 unchanged; :3000 untouched.
 UAT: [skill] Windows-side classification (PowerShell/CIM path) implemented to spec but
 never executed on a real Windows box.
+
+2026-07-19: [docs] PUBLIC-REPO READINESS + rebrand to "Agent Faces" (Felipe: "ready for a
+public repo... top left should say agent faces"). Three-agent audit first: NO real secrets in
+tracked files or all 107 commits (only leak-guard test fixtures); .env*.local ignored; one
+personal identifier found and removed (ralph-continuous.sh hardcoded Telegram chat-ID default).
+REBRAND (user-facing tier only): HUD title AGENT FACE -> AGENT FACES (components/face-hud.tsx),
+layout.tsx title/applicationName/OG/twitter + description, every script banner (check-env,
+scaffold, dev, deploy, sync-template, smoke), README headline + all "Claude Faces" prose,
+SKILL.md headline + metadata.brand, CONTRIBUTING/CLAUDE.md/docs/bridge/references, OpenRouter
+X-Title, ralph-continuous Telegram labels, stt test fixture. UNTOUCHED by design (breaking
+tier): package name claude-faces, repo slug/URLs, skill id agent-face (reserved-name rule),
+CONVERSATION_STORAGE_KEY, docker image, scaffold default dir. og.png had "Agent Face" baked
+into pixels — regenerated at 1200x630 from the same icon.svg glyph, now "Agent Faces".
+HYGIENE: package.json got description/license/author/repository/homepage/keywords (root +
+bridge); SECURITY.md + CODE_OF_CONDUCT.md added; CONTRIBUTING CI section now lists the REAL
+six verify gates (old text named nonexistent skill-lint/portability checks); .gitignore +
+out.png; workflows/.gitkeep removed; README: CI+MIT badges, License links LICENSE, stale
+"ships the build plan" Status replaced with the truth (the app works), new "How this was
+built" section telling the Ralph story (Felipe chose keep+explain over hiding the harness).
+DEMO: public/screenshots/demo.gif (2.1MB, 560px/8fps/32-color palette) recorded headlessly
+with Playwright driving emotion keys on the LIVE :3100 stack — the frame grab doubles as
+proof the running app hot-reloaded to AGENT FACES.
+Verify (all RUN, $? captured directly): brand sweep greps empty outside identifier tier;
+npm test EXIT=0; npm run verify EXIT=0 (6/6) x2 (post-rename, post-og); npm run verify:linux
+EXIT=0 x2; sync-template run after every mirrored edit (7 then 1 files).
+UAT: [docs] og.png/demo.gif look right in a real GitHub render; social-share card preview.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// check-env.mjs — report which brains / STT / TTS are configured for Agent Face.
+// check-env.mjs — report which brains / STT / TTS are configured for Agent Faces.
 //
 // A host agent (or a human) runs this BEFORE dev/deploy to see what the app can
 // actually do with the current environment: which chat brain would answer,
@@ -291,7 +291,7 @@ function mark(on) {
 function formatText(report, { sources }) {
   const brain = selectBrain(report);
   const lines = [];
-  lines.push("Agent Face — environment check");
+  lines.push("Agent Faces — environment check");
   lines.push(`  sources: ${sources.join(" + ")}`);
   lines.push("");
 

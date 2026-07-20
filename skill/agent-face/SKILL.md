@@ -14,12 +14,12 @@ description: >-
 version: 0.1.0
 license: MIT
 metadata:
-  brand: Claude Faces
+  brand: Agent Faces
   category: voice-ui
   package-manager: npm
 ---
 
-# Agent Face
+# Agent Faces
 
 Give your agent a **face**. Talk to it out loud, hear it answer, and watch an
 animated particle face lip-sync in real time.

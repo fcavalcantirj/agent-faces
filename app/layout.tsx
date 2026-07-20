@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const description =
-  "A talking, lip-syncing agent face — speak to your agent and watch a 12-emotion particle face reply in real time.";
+  "Agent Faces — give your agent a talking, lip-syncing face: speak to it and watch a 12-emotion particle face reply in real time.";
 
 const siteUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -10,9 +10,9 @@ const siteUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Agent Face",
+  title: "Agent Faces",
   description,
-  applicationName: "Agent Face",
+  applicationName: "Agent Faces",
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
@@ -21,14 +21,14 @@ export const metadata: Metadata = {
     apple: { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
   },
   openGraph: {
-    title: "Agent Face",
+    title: "Agent Faces",
     description,
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Agent Face" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Agent Faces" }],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Agent Face",
+    title: "Agent Faces",
     description,
     images: ["/og.png"],
   },

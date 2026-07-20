@@ -38,3 +38,6 @@ public/vad/
 .DS_Store
 *.log
 npm-debug.log*
+
+# stray playwright screenshot from the README/demo instructions
+out.png
