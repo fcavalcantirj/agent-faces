@@ -37,7 +37,7 @@ lip-sync (`wawa-lipsync`).
 ## One command (quickstart)
 
 Prerequisites: Node 20+ and npm, plus this repo
-(`git clone https://github.com/fcavalcantirj/claude-faces`) or a previously
+(`git clone https://github.com/fcavalcantirj/agent-faces`) or a previously
 scaffolded app. Then, from the directory that holds the app:
 
 ```bash
@@ -46,7 +46,7 @@ node skill/agent-face/scripts/start.mjs      # app on :3000, bridge on :8787
 
 It installs missing dependencies on first run (app AND bridge), frees the
 ports, starts the local **agent bridge** if the checkout ships one (the
-claude-faces repo does, under `bridge/`; the packaged app template
+agent-faces repo does, under `bridge/`; the packaged app template
 deliberately does not — see `bridge/README.md` for why), wires `.env.local`
 (append-only — existing lines are never rewritten), starts the dev server,
 and opens the face in your browser. **No bridge and no keys still opens a
@@ -135,7 +135,7 @@ The one thing to decide first: **where does the reply come from?**
   localhost / self-host directly, or from Vercel via a public HTTPS tunnel.
 
 **Wiring your own Claude Code agent (the North-Star case), in full:** this
-uses the `bridge/` server at the claude-faces **repo root** — deliberately
+uses the `bridge/` server at the agent-faces **repo root** — deliberately
 outside this skill's app template (offering claude.ai login to third parties
 needs Anthropic approval; running YOUR OWN agent on your own machine is fine).
 `start.mjs` does all of this automatically when `bridge/` is present; by hand:

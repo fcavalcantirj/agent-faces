@@ -1,14 +1,14 @@
 # syntax=docker/dockerfile:1
 # ============================================================================
-# claude-faces — self-host image (multi-stage: deps -> build -> runtime)
+# agent-faces — self-host image (multi-stage: deps -> build -> runtime)
 # ============================================================================
 # Builds a slim runtime image around Next.js `output: 'standalone'`.
 # Meant to run on your OWN VPS, right next to your agent, so Mode B
 # (the agent-bridge brain) reaches the agent over the private network with
 # NO public tunnel. See skill/agent-face/references/deploy.md.
 #
-#   docker build -t claude-faces .
-#   docker run --rm -p 3000:3000 --env-file .env.local claude-faces
+#   docker build -t agent-faces .
+#   docker run --rm -p 3000:3000 --env-file .env.local agent-faces
 # ----------------------------------------------------------------------------
 
 # Pin to the Node 22 line (matches .nvmrc — Next.js 16 requirement).

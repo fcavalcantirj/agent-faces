@@ -2877,3 +2877,21 @@ Verify (all RUN, $? captured directly): npm run verify EXIT=0; npm run verify:li
 gh repo edit EXIT=0. README is not template-mirrored (no sync needed; parity gate green).
 UAT: [docs] eyeball README render + PH gallery on GitHub; personalize the maker comment
 before posting.
+
+2026-07-19: [docs] REPO RENAMED claude-faces -> agent-faces (Felipe: "name of repo is name of
+folder (older name) should be agent-faces"). TDD: deploy-config.test.ts expectations flipped
+first (2 RED), then every tracked reference swept: README (badges/clone/Vercel button
+params/star CTA), package.json name+repository+homepage (root+bridge, lockfile regenerated),
+Dockerfile + docker-compose image/service, SECURITY.md advisory URL, CONTRIBUTING, CLAUDE.md,
+docs/*, references/*, .env.example, OpenRouter APP_REFERER, ralph scripts incl. the uppercase
+banner sed missed. Journals (prd.json/progress.txt) and vendored reference/fugu-face left
+as-is. README "Install the skill" now shows Claude Code usage: cp -r skill/agent-face
+~/.claude/skills/ then /agent-face in any session. gh repo rename agent-faces EXIT=0 run
+inside the repo (origin auto-updated); old slug 301-redirects. Personal ~/.claude skill cd
+made rename-tolerant (new path || old path) so /agent-faces works before AND after Felipe
+mv's the local folder — the folder move itself is HIS post-session step (this session's cwd
+and the running :3100 stack live inside it).
+Verify (all RUN, $? captured directly): deploy-config RED->GREEN; npm test EXIT=0;
+npm run verify EXIT=0 (6/6); npm run verify:linux EXIT=0; git remote -v shows agent-faces;
+curl -sI old URL -> HTTP/2 301.
+UAT: [docs] after moving the folder, run /agent-faces once to confirm the fallback path.

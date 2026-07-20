@@ -16,8 +16,8 @@ Requirements: **Node 22** (pinned in [`.nvmrc`](.nvmrc); Next.js 16 needs it) an
 (the canonical package manager — see [`docs/decisions.md`](docs/decisions.md)).
 
 ```bash
-git clone https://github.com/fcavalcantirj/claude-faces.git
-cd claude-faces
+git clone https://github.com/fcavalcantirj/agent-faces.git
+cd agent-faces
 nvm use                       # or otherwise ensure Node 22
 npm install
 cp .env.example .env.local    # optional — add ≥1 provider key, or run keyless

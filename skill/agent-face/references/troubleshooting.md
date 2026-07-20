@@ -1,4 +1,4 @@
-# Troubleshooting claude-faces
+# Troubleshooting agent-faces
 
 Symptom → cause → a concrete check you can run. The face itself is **never
 gated** — if the particles render, the app booted; everything below is about the

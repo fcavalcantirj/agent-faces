@@ -113,7 +113,7 @@ the `app/api/*` route handlers and are never prefixed with the client-exposed
 ## Repo layout
 
 ```
-claude-faces/
+agent-faces/
 ├─ app/
 │  ├─ layout.tsx, page.tsx, globals.css   # the Next.js App Router UI
 │  └─ api/                                # thin server proxies (hold secrets)

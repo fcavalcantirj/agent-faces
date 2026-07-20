@@ -33,7 +33,7 @@ const MODELS_URL = 'https://openrouter.ai/api/v1/models'
  * OpenRouter etiquette: `HTTP-Referer` + `X-Title` identify the calling app on
  * the OpenRouter dashboard/leaderboards. Non-secret and safe to hard-code.
  */
-const APP_REFERER = 'https://github.com/fcavalcantirj/claude-faces'
+const APP_REFERER = 'https://github.com/fcavalcantirj/agent-faces'
 const APP_TITLE = 'Agent Faces'
 
 /**

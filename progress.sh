@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Count passed and total requirements in the claude-faces PRD.
+# Count passed and total requirements in the agent-faces PRD.
 # Adapted from solvr/progress.sh. Default PRD lives at the repo root.
 
 prd_file="${PRD_FILE:-prd.json}"

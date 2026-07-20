@@ -1,7 +1,7 @@
 # claude-agent-bridge
 
 A **local, personal-use** bridge that puts **your own Claude Code agent** behind an
-OpenAI-compatible `POST /v1/chat/completions` (SSE), so the claude-faces app can use it as a
+OpenAI-compatible `POST /v1/chat/completions` (SSE), so the agent-faces app can use it as a
 brain via `AGENT_BRIDGE_KIND=claude-code`. Your conversation runs on **your own Claude
 subscription login** — with your agent's memory, tools, and filesystem access.
 
@@ -41,7 +41,7 @@ cd bridge
 npm install
 npm start                          # http://127.0.0.1:8787
 
-# in the claude-faces app's .env.local:
+# in the agent-faces app's .env.local:
 AGENT_BRIDGE_KIND=claude-code
 AGENT_BRIDGE_URL=http://127.0.0.1:8787
 ```

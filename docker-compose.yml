@@ -1,5 +1,5 @@
 # ============================================================================
-# claude-faces — self-host stack (run next to your agent)
+# agent-faces — self-host stack (run next to your agent)
 # ============================================================================
 # Runs the face app from the multi-stage Dockerfile. The whole point of
 # self-hosting is Mode B: put this container on the SAME private network as an
@@ -14,11 +14,11 @@
 # ----------------------------------------------------------------------------
 
 services:
-  claude-faces:
+  agent-faces:
     build:
       context: .
       dockerfile: Dockerfile
-    image: claude-faces
+    image: agent-faces
     # Publish the app. Override the host port with PORT in .env.local.
     ports:
       - "${PORT:-3000}:3000"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ralph-continuous.sh — never-ending supervisor around ralph.sh for claude-faces.
+# ralph-continuous.sh — never-ending supervisor around ralph.sh for agent-faces.
 #
 # Runs ralph.sh in fixed-size batches forever: pauses between successful batches,
 # backs off on API errors (rate limit / overloaded / 429 / 503 / capacity), and
@@ -77,7 +77,7 @@ print_progress_bar() {
 clear
 echo ""
 echo -e "${MAGENTA}${BOLD}╔═══════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${MAGENTA}${BOLD}║   🗣️😃  CLAUDE-FACES — RALPH CONTINUOUS RUNNER                     ║${NC}"
+echo -e "${MAGENTA}${BOLD}║   🗣️😃  AGENT-FACES — RALPH CONTINUOUS RUNNER                      ║${NC}"
 printf  "${MAGENTA}${BOLD}║   📦 Batch size:     %-3s iterations                              ║${NC}\n" "$BATCH_SIZE"
 printf  "${MAGENTA}${BOLD}║   ⏸️  Batch pause:    %-3s minutes                                ║${NC}\n" "$BATCH_PAUSE_MINS"
 printf  "${MAGENTA}${BOLD}║   ⏰ Wait on error:  %-3s minutes                                 ║${NC}\n" "$WAIT_TIME_MINS"

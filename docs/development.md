@@ -9,7 +9,7 @@ before your first change; for setup, scripts, style, and the PR workflow see
 ## Repo layout
 
 ```
-claude-faces/
+agent-faces/
 ├── app/                      # Next.js 16 App Router
 │   ├── layout.tsx, page.tsx  # shell + the orchestrated face UI
 │   ├── globals.css

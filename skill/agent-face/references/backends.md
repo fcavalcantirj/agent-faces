@@ -123,7 +123,7 @@ prompt for a stateful agent, you are talking to the agent you already run.
 
 ### `claude-code`: the local Agent SDK bridge
 
-The claude-faces repo ships a ready-made local bridge for this kind at
+The agent-faces repo ships a ready-made local bridge for this kind at
 `bridge/` (repo root, NOT part of this skill's app template): a small Node
 server that wraps the Claude Agent SDK's `query()` behind
 `/v1/chat/completions`, so the face talks to **your own Claude Code agent on

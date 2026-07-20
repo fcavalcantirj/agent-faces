@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately via
-[GitHub private vulnerability reporting](https://github.com/fcavalcantirj/claude-faces/security/advisories/new)
+[GitHub private vulnerability reporting](https://github.com/fcavalcantirj/agent-faces/security/advisories/new)
 — do not open a public issue for security problems.
 
 You should hear back within a week. Please include reproduction steps and the

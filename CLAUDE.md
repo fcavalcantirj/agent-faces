@@ -1,6 +1,6 @@
-# CLAUDE.md — claude-faces
+# CLAUDE.md — agent-faces
 
-Guidelines for any agent (human or Ralph loop) building **claude-faces**. This file is
+Guidelines for any agent (human or Ralph loop) building **agent-faces**. This file is
 injected into every Ralph iteration alongside `README.md`, `prd.json`, and `progress.txt`.
 
 ## What this project is

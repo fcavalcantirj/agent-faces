@@ -1,6 +1,6 @@
 # Architecture & Tooling Decisions
 
-An append-only log of load-bearing choices made while building **claude-faces**.
+An append-only log of load-bearing choices made while building **agent-faces**.
 Each entry: what was decided, when, and why — so future work (human or Ralph loop)
 doesn't re-litigate settled ground.
 
@@ -12,7 +12,7 @@ doesn't re-litigate settled ground.
 package manager for this repo. Not pnpm, not yarn, not bun.
 
 **Why:**
-- **Maximum cross-harness portability.** claude-faces ships as a portable Agent
+- **Maximum cross-harness portability.** agent-faces ships as a portable Agent
   Skill that must scaffold and run under many harnesses (Claude Code, Hermes,
   openclaw, trustclaw, nanoclaw) and on many machines. `npm` ships with Node and
   needs no extra install step, so `npm install` / `npm run dev` work everywhere

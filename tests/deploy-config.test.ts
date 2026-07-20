@@ -27,7 +27,7 @@ describe("Deploy with Vercel button", () => {
   it("is present and points at the real public repository", () => {
     const url = deployUrl();
     const repo = url.searchParams.get("repository-url");
-    expect(repo).toBe("https://github.com/fcavalcantirj/claude-faces");
+    expect(repo).toBe("https://github.com/fcavalcantirj/agent-faces");
   });
 
   it("prompts for exactly the keys the app actually reads", () => {
@@ -69,7 +69,7 @@ describe("Deploy with Vercel button", () => {
   it("links to a doc that actually exists in this repo", () => {
     const url = deployUrl();
     const envLink = url.searchParams.get("envLink") ?? "";
-    expect(envLink).toContain("github.com/fcavalcantirj/claude-faces");
+    expect(envLink).toContain("github.com/fcavalcantirj/agent-faces");
 
     // .../blob/main/<path> — the path must resolve to a real file.
     const m = envLink.match(/\/blob\/[^/]+\/(.+)$/);

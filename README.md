@@ -9,7 +9,7 @@
 You speak → Whisper hears you → your agent answers → a ~4,700-particle face
 speaks the reply out loud, lip-syncing to the real audio, with **12 emotions** it steers itself.
 
-[![CI](https://github.com/fcavalcantirj/claude-faces/actions/workflows/ci.yml/badge.svg)](https://github.com/fcavalcantirj/claude-faces/actions/workflows/ci.yml)
+[![CI](https://github.com/fcavalcantirj/agent-faces/actions/workflows/ci.yml/badge.svg)](https://github.com/fcavalcantirj/agent-faces/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node 22+](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)](https://nodejs.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-8A2BE2)](CONTRIBUTING.md)
@@ -29,8 +29,8 @@ speaks the reply out loud, lip-syncing to the real audio, with **12 emotions** i
 ## ⚡ 60-second start
 
 ```bash
-git clone https://github.com/fcavalcantirj/claude-faces.git
-cd claude-faces
+git clone https://github.com/fcavalcantirj/agent-faces.git
+cd agent-faces
 node skill/agent-face/scripts/start.mjs    # installs deps, wires env, starts everything, opens the face
 ```
 
@@ -92,7 +92,7 @@ Full contract + per-agent wiring: [`skill/agent-face/references/backends.md`](sk
 
 ## 🚀 Deploy — your pick
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/fcavalcantirj/claude-faces&env=ANTHROPIC_API_KEY,OPENROUTER_API_KEY,GROQ_API_KEY,OPENAI_API_KEY&envDescription=All%20optional%20%E2%80%94%20the%20app%20falls%20back%20to%20browser%20Whisper%20%2B%20Web%20Speech%20if%20none%20are%20set&envLink=https://github.com/fcavalcantirj/claude-faces/blob/main/skill/agent-face/references/backends.md&project-name=claude-faces&repository-name=claude-faces)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/fcavalcantirj/agent-faces&env=ANTHROPIC_API_KEY,OPENROUTER_API_KEY,GROQ_API_KEY,OPENAI_API_KEY&envDescription=All%20optional%20%E2%80%94%20the%20app%20falls%20back%20to%20browser%20Whisper%20%2B%20Web%20Speech%20if%20none%20are%20set&envLink=https://github.com/fcavalcantirj/agent-faces/blob/main/skill/agent-face/references/backends.md&project-name=agent-faces&repository-name=agent-faces)
 
 - **Vercel** — the button above, or `node skill/agent-face/scripts/deploy.mjs --target vercel`.
   All keys optional; Mode B is wired after deploy (it needs a reachable agent).
@@ -109,7 +109,18 @@ Details: [`skill/agent-face/references/deploy.md`](skill/agent-face/references/d
 `skill/agent-face/` is a **portable Agent Skill** (open [Agent Skills](https://agentskills.io)
 standard) — plain `node` scripts, no harness-specific tooling. Drop it into the skills
 directory of **Claude Code, Hermes, openclaw, trustclaw, or nanoclaw** and the agent gains the
-ability to scaffold, run, and deploy its own face:
+ability to scaffold, run, and deploy its own face.
+
+**Claude Code:**
+
+```bash
+cp -r skill/agent-face ~/.claude/skills/
+```
+
+Then in any Claude Code session type **`/agent-face`** — or just say *"give my agent a
+face"* — and the skill walks through picking a brain, running locally, and deploying.
+
+The skill drives:
 
 | Script | Purpose |
 |---|---|
@@ -168,7 +179,7 @@ smoke tests, app-template parity) plus a Playwright browser e2e suite guard `mai
 
 <div align="center">
 
-**If a talking face for your agent is something the world needs — [star the repo ⭐](https://github.com/fcavalcantirj/claude-faces/stargazers) and say hi.**
+**If a talking face for your agent is something the world needs — [star the repo ⭐](https://github.com/fcavalcantirj/agent-faces/stargazers) and say hi.**
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [MIT License](LICENSE)
 

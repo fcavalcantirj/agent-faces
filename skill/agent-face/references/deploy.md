@@ -1,4 +1,4 @@
-# Deploying claude-faces
+# Deploying agent-faces
 
 Two targets. Pick based on where your brain lives.
 
@@ -43,8 +43,8 @@ docker compose up --build           # serves http://localhost:${PORT:-3000}
 Or without compose:
 
 ```bash
-docker build -t claude-faces .
-docker run --rm -p 3000:3000 --env-file .env.local claude-faces
+docker build -t agent-faces .
+docker run --rm -p 3000:3000 --env-file .env.local agent-faces
 ```
 
 ### Wire Mode B over the private network (no tunnel)

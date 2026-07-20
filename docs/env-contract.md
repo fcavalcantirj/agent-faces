@@ -1,6 +1,6 @@
 # Environment Contract
 
-The single source of truth for **every** environment variable claude-faces
+The single source of truth for **every** environment variable agent-faces
 reads, what unlocks what, and how the brain is selected. Keep this file,
 [`.env.example`](../.env.example), the `/api/config` probe, the
 `skill/agent-face/scripts/check-env.mjs` script, and

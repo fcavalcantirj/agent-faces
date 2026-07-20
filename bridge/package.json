@@ -8,7 +8,7 @@
   "author": "Felipe Cavalcanti",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fcavalcantirj/claude-faces.git",
+    "url": "git+https://github.com/fcavalcantirj/agent-faces.git",
     "directory": "bridge"
   },
   "scripts": {

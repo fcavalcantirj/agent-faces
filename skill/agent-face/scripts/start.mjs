@@ -10,7 +10,7 @@
 // Composition, not reinvention: the app half delegates to dev.mjs (which
 // already port-kills, starts `npm run dev`, and opens the browser). This
 // script adds the BRIDGE half — IF a local Claude Agent SDK bridge exists at
-// <app-dir>/bridge (it ships with the claude-faces repo, deliberately NOT with
+// <app-dir>/bridge (it ships with the agent-faces repo, deliberately NOT with
 // this skill's app template: offering claude.ai login to third parties needs
 // Anthropic approval; running YOUR OWN agent on your own machine is fine).
 // With no bridge/ dir, this is dev.mjs with extra honesty: it says what you
@@ -225,7 +225,7 @@ async function main() {
     console.log(
       "No bridge/ directory here — starting the face without a local agent " +
         "bridge (zero-key mode still works). To talk to YOUR OWN Claude Code " +
-        "agent, use the claude-faces repo, which ships one (bridge/README.md).",
+        "agent, use the agent-faces repo, which ships one (bridge/README.md).",
     );
   }
 

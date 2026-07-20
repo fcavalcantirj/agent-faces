@@ -69,9 +69,9 @@ describe("classifyOccupant", () => {
   });
 
   // The /app-vs-/app2 trap, command-line edition: a sibling dir sharing the
-  // app dir as a string prefix (claude-faces vs claude-faces-v2) must never
+  // app dir as a string prefix (agent-faces vs agent-faces-v2) must never
   // classify as ours just because the app path is a substring of its path.
-  it("a sibling dir sharing the app path as a prefix is foreign (claude-faces vs claude-faces-v2)", () => {
+  it("a sibling dir sharing the app path as a prefix is foreign (agent-faces vs agent-faces-v2)", () => {
     expect(
       classifyOccupant(
         { pid: 6, command: `node ${APP}-v2/server.js`, cwd: `${APP}-v2` },

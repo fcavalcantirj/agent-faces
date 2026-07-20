@@ -2,7 +2,7 @@
 set -e
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ralph.sh — bounded per-task build loop for claude-faces.
+# ralph.sh — bounded per-task build loop for agent-faces.
 #
 # Runs headless Claude Code N times. Each run: pick the first prd.json task with
 # passes=false, do ONLY that task (tests-first where sensible), run the task's own
@@ -20,7 +20,7 @@ set -e
 # Load git-ignored local config if present (RALPH_PUSH, MODEL, TELEGRAM_*, etc.)
 if [ -f .env.ralph.local ]; then set -a; . ./.env.ralph.local; set +a; fi
 
-# PRD file (override with env var). Lives at the repo root for claude-faces.
+# PRD file (override with env var). Lives at the repo root for agent-faces.
 PRD_FILE="${PRD_FILE:-prd.json}"
 
 # Auto-push after each task (1=push, 0=commit only). Default matches Ralph.
