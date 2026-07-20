@@ -3025,3 +3025,23 @@ Verify (all RUN, $? captured directly): conversation tests RED(2)->GREEN; npm te
 npm run verify EXIT=0; npm run verify:linux EXIT=0; sync-template run (3 mirrors).
 UAT: [frontend] dasbrow pulls + rebuilds on the Pi and confirms the glitching is gone in
 Felipe's browser (the state-carrying one that repro'd it).
+
+2026-07-20: [frontend] HYDRATION FIX INDEPENDENTLY CONFIRMED + orphan hunt closed (dasbrow
+msgs 671/672, arm64 Pi, all [REAL]). #418: dasbrow reproduced Felipe's exact condition on
+98ee04a — LAN-IP origin (100.82.152.25, untrustworthy), a real turn to seed
+agent-face:conversation:v1, reload to force restored-state hydration — RESULT: zero #418 /
+hydration matches. The getServerState pristine-snapshot fix holds on a second machine,
+second browser, second arch; only the environmental COOP warning remains (HTTPS/tailscale
+serve clears it — parked, Felipe's optional call). Dasbrow's earlier "stale cache" read
+withdrawn by dasbrow itself — root cause was the localStorage-restored server snapshot.
+ORPHAN: diagnostics ran twice in a clean window on the Pi — tmux kill-session REAPED
+next-server cleanly both times; the original orphan is INTERMITTENT (fork/kill race),
+consistent with the x86 non-repro. The lying detector can't be named without catching the
+state live; the connect-probe backstop (0b0f937) makes the failure loud (exit 3) instead of
+a silent EADDRINUSE either way. Dasbrow will run (b)-(e) if it ever catches one wild.
+STATE: both courts clear. Cross-machine, agent-to-agent verification loop delivered: skill
+auto-discovery (Hermes harness), Mode-B answers-as-you with memory (kind=hermes, real
+DasBrowCoder), arm64 platform coverage (smoke 43/43), an adapter contract, a port-guard
+hardening, a venv autodetect, and a hydration fix — every one live-verified by a peer agent.
+Remaining items are ALL parked/optional: tailscale-serve HTTPS, local folder mv, PH
+launch-day manual steps (docs/launch/product-hunt.md checklist).
