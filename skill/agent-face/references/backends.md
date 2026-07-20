@@ -27,6 +27,13 @@ the three consistent.
 `/api/transcribe`. `OPENAI_API_KEY` unlocks hosted STT + `gpt-4o-mini-tts`
 voice-out but is **not** a chat brain.
 
+Where to create them: Anthropic → [console.anthropic.com](https://console.anthropic.com/)
+(Settings → API keys) · OpenRouter → [openrouter.ai/keys](https://openrouter.ai/keys) ·
+Groq → [console.groq.com/keys](https://console.groq.com/keys) · OpenAI →
+[platform.openai.com/api-keys](https://platform.openai.com/api-keys). Every key can be
+set from the GUI too: Settings → **SERVER ENV** (guarded by the settings password the
+launcher provisions on first run).
+
 Each adapter reads its key server-side, streams tokens, and honors an abort
 signal for barge-in. The picker preselects the adapter's default model (or the
 configured default-model override when set).
@@ -196,6 +203,18 @@ claude.ai login to third parties, so never deploy it as a user-facing feature.
 It refuses to start while `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` are
 exported (they would silently switch billing from your subscription to metered
 API usage). Details and caveats: `bridge/README.md`.
+
+**Headless machines (a Pi, a VPS) — `claude setup-token`:** with no interactive
+Claude Code login on the box, generate a long-lived subscription token:
+
+1. Run `claude setup-token` (anywhere the Claude Code CLI is logged in — it
+   prints a URL to authorize in the browser).
+2. Paste the printed token as `CLAUDE_CODE_OAUTH_TOKEN` — either in the GUI
+   (Settings → SERVER ENV; applies after a launcher restart) or in
+   `.env.local`. The launcher forwards it to the bridge child; the bridge
+   itself never reads env files.
+3. Never also export `ANTHROPIC_API_KEY` on that box — the bridge fails closed
+   rather than silently billing your conversations as metered API usage.
 
 ---
 

@@ -58,7 +58,7 @@ export default function Home() {
   // Graceful degradation: probe server keys + browser abilities on load and
   // reconcile settings to a working path. The face stays interactive regardless;
   // we surface a "configure a brain" banner (no chat) and any voice-in/out hints.
-  const { matrix, hasBrain, loading: capsLoading } = useCapabilities()
+  const { matrix, hasBrain, loading: capsLoading, refresh: refreshCaps } = useCapabilities()
   const voiceHints = matrix.features.filter(
     (f) => f.key !== 'chat' && !f.available && f.message,
   )
@@ -257,7 +257,11 @@ export default function Home() {
         </form>
       </div>
 
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onConfigChanged={refreshCaps}
+      />
     </main>
   )
 }

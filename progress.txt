@@ -3140,3 +3140,56 @@ asked of dasbrow in msg 675, same line format). Ports/processes cleaned after th
 UAT: [latency] Felipe speaks a few real turns and pastes copy(__agentFaceLatency.dump())
 — his lived lines are the ground truth the lab runs supplement; and the "does it FEEL
 fast" verdict after the approved wins land.
+
+2026-07-20: [UAT] REMOTE-MIC DEFINITIVELY CLOSED — Felipe: "worked" on the Pi over the
+tailscale-serve HTTPS URL (mic prompt + transcript + spoken reply; the origin-policy
+diagnosis from fb7f94e held end-to-end). The felt gap that surfaced immediately after:
+the Pi rig then needed a server API key (hosted STT) and the only remedy was ssh — which
+became the next feature, below.
+
+2026-07-20: [fullstack] SERVER ENV GUI SHIPPED — every env var manageable from the
+settings drawer, guarded by a MASTER PASSWORD the launcher provisions on first run
+(Felipe's design, validated per his ask by TWO design agents: UX/implementation + an
+adversarial security audit; all review MUSTs implemented). WHAT SHIPPED:
+lib/settings/env-registry.ts — the curated allowlist (23 rows; tier-1 keys incl.
+CLAUDE_CODE_OAUTH_TOKEN with the `claude setup-token` walkthrough; TTS/STT knobs; hermes
+aliases; deploy gates read-only; FACE_SETTINGS_PASSWORD_HASH + CLAUDE_BRIDGE_* + VERCEL*
++ NEXT_PUBLIC_* excluded BY DESIGN). lib/settings/env-admin.ts — the fail-closed pipeline:
+404 when unprovisioned (cloaked) → 403 vercel_readonly (before auth; read-only fs is the
+honest truth there) → transport rule (localhost-http OK; remote-http 403 — same rebinding-
+killing Host check; remote-https needs FACE_SETTINGS_ALLOW_REMOTE=1, cloudflared safety) →
+Sec-Fetch-Site → token bucket 5cap/20s (consumed on FAILURE only) → scrypt$N$r$p$salt$hash
+bearer verify (params parsed from the string, timingSafeEqual) → 415/413 → registry+value
+validation (single-line ≤4KB values — env-injection guard) → mutex'd atomic tmp+rename
+.env.local write + live process.env apply → audit line (names only). PAIRED-SECRET RULE:
+changing AGENT_BRIDGE_URL/HERMES_API_BASE_URL clears its paired key unless a new one rides
+along (URL-swap would exfiltrate the old key). PERSISTENCE HONESTY: vars defined outside
+.env.local (shell/Docker env_file) report live-until-restart (@next/env initial-env
+precedence — found by the security agent). GUI: settings drawer gains a SERVER ENV view —
+USED vars first (Felipe's ordering), then unset tier-1, SHOW ALL for the rest; secrets
+write-only forever (set/not-set badges); per-row how-to-get-this help + console links;
+unlock box only renders in a secure context; reasons render honest guidance (run-launcher /
+Vercel-dashboard / tailscale-HTTPS). Saves live-refresh capabilities WITHOUT reload (new
+useCapabilities.refresh() + no-store; reconcileSettings self-heals picks). LAUNCHER:
+start.mjs prompts for the password on first run (muted TTY, min 12, skippable,
+--password/--no-password-prompt); new settings-password.mjs (hash CLI for Docker/headless/
+rotation; PARITY TEST pins the .mjs hasher to the TS verifier forever); buildBridgeEnv now
+forwards a .env.local CLAUDE_CODE_OAUTH_TOKEN to the bridge child — the ANTHROPIC_* scrub
+runs LAST and is test-pinned (fileEnv can never smuggle a metered key). DOCS: .env.example
+(+TTS trio — was read-by-code but documented NOWHERE, contract violation fixed —
++FACE_SETTINGS_*, +OAUTH token), env-contract.md (TTS knobs + GUI-editor semantics tables),
+README (Get-your-keys console links + setup-token steps + password in quick start),
+backends.md (per-provider key links + headless setup-token walkthrough), SKILL.md (313
+lines, cap 500), bridge/README (launcher forwarding note), panel footer copy truth-up.
+Verify (all RUN, $? captured directly): registry RED→GREEN 12; env-admin RED→GREEN 27
+(transport/rate/injection/paired-key/persistence matrices); routes RED→GREEN (env 4 +
+config settings field); panel-model RED→GREEN 19 (serverEnvRows); launcher RED→GREEN 23
+(parity + scrub-last); npm test EXIT=0 (672); npm run verify EXIT=0 (6 gates incl.
+template parity); npm run verify:linux EXIT=0; PLAYWRIGHT_PORT=3100 full e2e EXIT=0 (19
+passed incl. 2 new server-env specs — READ-ONLY by design: a browser save would clobber
+the dev rig's real .env.local; writes are unit-covered); sync-template run (85 files).
+UAT: [settings] Felipe: restart the launcher, set a password at the prompt, open Settings
+→ SERVER ENV, unlock, set OPENAI_TTS_VOICE (expect badge + "saved — live now" + value
+visible) and a key (expect hosted STT to appear WITHOUT reload); check .env.local gained
+the lines; [settings-remote] on the Pi: pull+rebuild, set FACE_SETTINGS_ALLOW_REMOTE=1 +
+a password hash, edit a key from the tailscale HTTPS URL.

@@ -87,6 +87,41 @@ uses `whisper-large-v3-turbo` automatically whenever `GROQ_API_KEY` is set.)
 
 ---
 
+## Hosted TTS tuning knobs
+
+Tune the OpenAI voice-out in `/api/tts` (all need `OPENAI_API_KEY`).
+
+| Variable | Meaning | Default |
+|---|---|---|
+| `OPENAI_TTS_MODEL` | OpenAI TTS model | `gpt-4o-mini-tts` |
+| `OPENAI_TTS_VOICE` | Voice (alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse) | `alloy` |
+| `OPENAI_TTS_FORMAT` | Audio format (mp3, opus, aac, flac, wav, pcm) | `mp3` |
+
+---
+
+## GUI settings editor (SERVER ENV)
+
+The settings drawer's **SERVER ENV** view can edit this contract from the
+browser, guarded by a master password and a fixed allowlist
+(`lib/settings/env-registry.ts`). Semantics:
+
+| Variable | Meaning |
+|---|---|
+| `FACE_SETTINGS_PASSWORD_HASH` | scrypt hash (`scrypt$N$r$p$salt$hash`) gating `/api/env`. Generate via the launcher's first-run prompt or `node skill/agent-face/scripts/settings-password.mjs`. Absent ⇒ the editor (and the route) do not exist. Never editable through the GUI itself. |
+| `FACE_SETTINGS_ALLOW_REMOTE` | `1` allows settings writes from remote **HTTPS** origins (e.g. the tailscale-serve URL). Plain-HTTP remote writes are always refused; localhost always works. |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code subscription token (`claude setup-token`) for the Mode B `claude-code` bridge on headless machines. The launcher forwards it from `.env.local` to the bridge child; applies after a launcher restart. |
+
+Write semantics: a save writes `.env.local` (atomic) AND live-applies to the
+running server — most vars take effect on the next request. Honesty rules the
+GUI reports per save: a var that was defined **outside** `.env.local` (shell
+export, Docker `env_file`) reverts on restart (`live-until-restart`); on
+Vercel writes are refused entirely (read-only fs — use the dashboard, changes
+apply on redeploy). Docker persistence: copy the line into the host-side
+`.env.local` that `env_file` mounts, then recreate. Secrets are write-only:
+no API response ever echoes a value.
+
+---
+
 ## Deploy knobs
 
 | Variable | Meaning |

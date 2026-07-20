@@ -15,6 +15,7 @@ import {
   type ChatAdapter,
   type ProviderEnv,
 } from '@/lib/providers'
+import { settingsAvailability, type SettingsAvailability } from '@/lib/settings/env-admin'
 
 // Reads process.env at request time (per-deployment env), so it must run on the
 // Node runtime and never be statically pre-rendered.
@@ -45,6 +46,8 @@ interface ConfigPayload {
   tts: { openai: boolean }
   /** The brain to preselect when the user has not picked one, or null if none. */
   defaultProvider: string | null
+  /** Server-env editor state (booleans/enum only — drives the GUI's modes). */
+  settings: SettingsAvailability
 }
 
 /**
@@ -97,7 +100,7 @@ async function defaultModelFor(
   }
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request?: Request): Promise<Response> {
   const env: ProviderEnv = process.env
   const adapters = listAdapters()
 
@@ -136,7 +139,14 @@ export async function GET(): Promise<Response> {
 
   const defaultProvider = selectDefaultAdapter(env)?.id ?? null
 
-  const payload: ConfigPayload = { providers, agentBridge, stt, tts, defaultProvider }
+  // Transport-specific reasons come from GET /api/env (which always has the
+  // real request); here the fallback request only feeds host classification.
+  const settings = settingsAvailability(
+    env as Record<string, string | undefined>,
+    request ?? new Request('http://localhost/'),
+  )
+
+  const payload: ConfigPayload = { providers, agentBridge, stt, tts, defaultProvider, settings }
 
   return new Response(JSON.stringify(payload), {
     status: 200,

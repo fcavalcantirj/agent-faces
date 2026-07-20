@@ -26,7 +26,10 @@ permission mode and the bind address accordingly.
 
 The bridge holds **no credentials**. The Agent SDK spawns a Claude Code CLI subprocess that
 self-authenticates from `CLAUDE_CODE_OAUTH_TOKEN` (`claude setup-token`) or the `~/.claude`
-credential store — i.e. your existing subscription login.
+credential store — i.e. your existing subscription login. The launcher
+(`skill/agent-face/scripts/start.mjs`) forwards a `CLAUDE_CODE_OAUTH_TOKEN` found in the
+app's `.env.local` (e.g. set via the GUI's SERVER ENV editor) into the bridge child —
+the bridge itself never reads env files, and the metered-key scrub still runs last.
 
 **The bridge refuses to start while `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` is
 exported.** The CLI silently *prefers* a key over the subscription, which would flip billing

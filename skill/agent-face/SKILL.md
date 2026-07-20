@@ -302,6 +302,12 @@ Load these only when you need the detail:
 | `AGENT_BRIDGE_KIND` / `AGENT_BRIDGE_URL` / `AGENT_BRIDGE_KEY` | Wire the face to your running agent (Mode B) |
 | `HERMES_API_BASE_URL` / `HERMES_API_KEY` | Hermes-compatible convenience aliases for Mode B |
 | `ALLOW_AGENT_BRIDGE_IN_PROD` | `1` allows a non-public bridge URL in production (self-host / private network) |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Subscription auth for the `claude-code` bridge on headless boxes (`claude setup-token`) |
+| `FACE_SETTINGS_PASSWORD_HASH` | Unlocks the GUI env editor (Settings → SERVER ENV) — set by `start.mjs`'s first-run prompt |
 
 Keys are **never** exposed to the browser (never `NEXT_PUBLIC_*`). Missing keys
 degrade gracefully. Full contract: [`references/backends.md`](references/backends.md).
+Every key/knob is editable from the GUI (Settings → **SERVER ENV**): writes are
+password-guarded, land in `.env.local`, live-apply to the running server, and
+secret values are never displayed back. On Vercel the view is read-only (env
+lives in the dashboard; changes apply on redeploy).

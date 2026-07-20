@@ -221,3 +221,45 @@ describe("start.mjs CLI contract", () => {
     expect(r.stderr + r.stdout).toMatch(/unknown/i);
   });
 });
+
+describe("settings password provisioning (args + bridge env pass-through)", () => {
+  it("parses --password and --no-password-prompt; bare --password is junk", () => {
+    expect(parseStartArgs(["--password", "hunter2hunter2"]).password).toBe("hunter2hunter2");
+    expect(parseStartArgs(["--no-password-prompt"]).passwordPrompt).toBe(false);
+    expect(parseStartArgs([]).passwordPrompt).toBe(true);
+    expect(() => parseStartArgs(["--password"])).toThrow(/--password/);
+  });
+
+  it("buildBridgeEnv forwards a .env.local CLAUDE_CODE_OAUTH_TOKEN to the bridge child", () => {
+    const child = buildBridgeEnv(
+      { PATH: "/bin" },
+      { yolo: false, fileEnv: { CLAUDE_CODE_OAUTH_TOKEN: "tok_from_file" } },
+    );
+    expect(child.CLAUDE_CODE_OAUTH_TOKEN).toBe("tok_from_file");
+  });
+
+  it("the shell env wins over fileEnv for the OAuth token", () => {
+    const child = buildBridgeEnv(
+      { CLAUDE_CODE_OAUTH_TOKEN: "tok_from_shell" },
+      { yolo: false, fileEnv: { CLAUDE_CODE_OAUTH_TOKEN: "tok_from_file" } },
+    );
+    expect(child.CLAUDE_CODE_OAUTH_TOKEN).toBe("tok_from_shell");
+  });
+
+  it("the metered-credential scrub is LAST: fileEnv can never smuggle ANTHROPIC_* in", () => {
+    const child = buildBridgeEnv(
+      { ANTHROPIC_API_KEY: "sk-shell" },
+      {
+        yolo: false,
+        fileEnv: {
+          ANTHROPIC_API_KEY: "sk-file",
+          ANTHROPIC_AUTH_TOKEN: "tok-file",
+          CLAUDE_CODE_OAUTH_TOKEN: "tok_ok",
+        },
+      },
+    );
+    expect(child.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(child.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+    expect(child.CLAUDE_CODE_OAUTH_TOKEN).toBe("tok_ok");
+  });
+});

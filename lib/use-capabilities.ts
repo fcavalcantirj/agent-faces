@@ -11,7 +11,7 @@
 // It NEVER hard-fails: a failed probe falls back to `EMPTY_CONFIG` (chat off,
 // local face on), and the face stays interactive regardless.
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import {
   EMPTY_CONFIG,
   computeFeatureMatrix,
@@ -35,6 +35,12 @@ export interface UseCapabilities {
   loading: boolean
   /** Convenience: is any chat brain reachable right now? */
   hasBrain: boolean
+  /**
+   * Re-probe `/api/config` (cache-bypassing) — call after server env changes
+   * (the SERVER ENV editor). `reconcileSettings` re-runs on the fresh config,
+   * so stale selections self-heal without a reload.
+   */
+  refresh: () => void
 }
 
 export interface UseCapabilitiesOptions {
@@ -86,14 +92,19 @@ export function useCapabilities(options: UseCapabilitiesOptions = {}): UseCapabi
   // between the server render and the first client render.
   const loading = !options.config && canFetch && probed === null
 
-  // Load the capability probe once (unless config is injected). A failed fetch
-  // degrades to EMPTY_CONFIG (chat off, local face on) — never a thrown UI.
+  // Refresh nonce: 0 = the mount probe; bumps re-run the effect with a
+  // cache-bypassing fetch (the /api/config response carries max-age=30).
+  const [nonce, setNonce] = useState(0)
+  const refresh = useCallback(() => setNonce((n) => n + 1), [])
+
+  // Load the capability probe on mount and on refresh() (unless config is
+  // injected). A failed fetch degrades to EMPTY_CONFIG — never a thrown UI.
   useEffect(() => {
     if (options.config) return
     const doFetch = options.fetchImpl ?? (typeof fetch !== 'undefined' ? fetch : undefined)
     if (!doFetch) return
     let cancelled = false
-    doFetch('/api/config')
+    doFetch('/api/config', nonce > 0 ? { cache: 'no-store' } : undefined)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`config ${r.status}`))))
       .then((data: AppConfig) => {
         if (!cancelled) setProbed(data)
@@ -106,7 +117,7 @@ export function useCapabilities(options: UseCapabilitiesOptions = {}): UseCapabi
     return () => {
       cancelled = true
     }
-  }, [options.config, options.fetchImpl])
+  }, [options.config, options.fetchImpl, nonce])
 
   // Reconcile persisted settings whenever the resolved config changes. Auto-pick
   // the zero-key local paths when no hosted key exists; repair invalid choices.
@@ -127,5 +138,5 @@ export function useCapabilities(options: UseCapabilitiesOptions = {}): UseCapabi
   const matrix = useMemo(() => computeFeatureMatrix(config, browser), [config, browser])
   const hasBrain = matrix.chat.available
 
-  return { config, browser, matrix, loading, hasBrain }
+  return { config, browser, matrix, loading, hasBrain, refresh }
 }

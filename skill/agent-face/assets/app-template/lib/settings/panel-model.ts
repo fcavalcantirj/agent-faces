@@ -19,6 +19,7 @@
 import type { SttMode } from '@/lib/stt'
 import type { TtsEngine } from '@/lib/tts'
 import type { FaceSkinId } from '@/lib/face/skin'
+import { ENV_REGISTRY, type EnvVarSpec } from './env-registry'
 
 // --- The client-facing shape of the /api/config payload ---------------------
 // (Mirrors app/api/config/route.ts's response — booleans + non-secret ids only.)
@@ -38,6 +39,8 @@ export interface AppConfig {
   stt: { groq: boolean; openai: boolean }
   tts: { openai: boolean }
   defaultProvider: string | null
+  /** Server-env editor state (absent on older payloads / EMPTY_CONFIG). */
+  settings?: { writable: boolean; reason?: string }
 }
 
 /** The agent-bridge is surfaced under its own key, not inside `providers`. */
@@ -211,4 +214,36 @@ export function faceSkinOptions(): OptionAvailability<FaceSkinId>[] {
 /** True when no chat brain is configured at all — the UI shows a setup hint. */
 export function hasNoBrain(config: AppConfig): boolean {
   return selectableBrains(config).length === 0
+}
+
+// --- SERVER ENV view ordering ------------------------------------------------
+
+export interface ServerEnvRows {
+  /** The default view: SET vars first (registry order), then unset tier-1. */
+  primary: EnvVarSpec[]
+  /** Behind SHOW ALL: the remaining unset editable knobs/aliases. */
+  more: EnvVarSpec[]
+  /** Deploy gates — displayed, never editable. */
+  deploy: EnvVarSpec[]
+}
+
+/**
+ * Felipe's ordering rule (2026-07-20): "show all, but start with the USED
+ * ones" — whatever is set on THIS deployment leads, the important-but-unset
+ * tier-1 rows follow (a fresh install still shows where the first key goes),
+ * and everything else waits behind the SHOW ALL expander.
+ */
+export function serverEnvRows(
+  vars: Record<string, { set: boolean }> | undefined,
+): ServerEnvRows {
+  const isSet = (name: string) => Boolean(vars?.[name]?.set)
+  const editable = ENV_REGISTRY.filter((s) => !s.readOnly)
+  return {
+    primary: [
+      ...editable.filter((s) => isSet(s.name)),
+      ...editable.filter((s) => !isSet(s.name) && s.tier === 1),
+    ],
+    more: editable.filter((s) => !isSet(s.name) && s.tier > 1),
+    deploy: ENV_REGISTRY.filter((s) => s.readOnly),
+  }
 }

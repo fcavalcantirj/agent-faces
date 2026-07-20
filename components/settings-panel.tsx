@@ -21,6 +21,7 @@ import type { TtsEngine } from '@/lib/tts'
 import type { FaceSkinId } from '@/lib/face/skin'
 import type { InputMode, SttLanguage } from '@/lib/conversation'
 import { useConversation, type UseConversation } from '@/lib/use-conversation'
+import { ServerEnvPanel } from '@/components/server-env-panel'
 import {
   brainOptions,
   faceSkinOptions,
@@ -45,6 +46,8 @@ export interface SettingsPanelProps {
   conversation?: UseConversation
   /** Injectable fetch (tests/embeds). Defaults to the global `fetch`. */
   fetchImpl?: typeof fetch
+  /** Fired after a SERVER ENV save so page-level capabilities can refresh. */
+  onConfigChanged?: () => void
 }
 
 export function SettingsPanel({
@@ -53,6 +56,7 @@ export function SettingsPanel({
   config: injectedConfig,
   conversation,
   fetchImpl,
+  onConfigChanged,
 }: SettingsPanelProps) {
   // Always call the hook (rules of hooks); prefer an injected binding's values.
   const hookConversation = useConversation()
@@ -68,6 +72,16 @@ export function SettingsPanel({
   const [configError, setConfigError] = useState<string | null>(null)
   const config = injectedConfig ?? fetchedConfig
 
+  // 'settings' | 'server-env' — the drawer hosts two views; closing resets to
+  // the main view (handled in the close handler, not an effect — lint rule).
+  const [view, setView] = useState<'settings' | 'server-env'>('settings')
+  // Bumped after a SERVER ENV save so the drawer's own probe refetches fresh.
+  const [configNonce, setConfigNonce] = useState(0)
+  const close = () => {
+    setView('settings')
+    onClose()
+  }
+
   // Fetched models are KEYED BY PROVIDER and derived against the active one, so
   // switching providers empties the list by derivation (no synchronous setState
   // in the effect's early return) and A's stale catalog never shows during B's
@@ -78,10 +92,11 @@ export function SettingsPanel({
   } | null>(null)
 
   // Load the capability probe once the drawer opens (unless config is injected).
+  // A bumped nonce (after a SERVER ENV save) refetches past the 30s cache.
   useEffect(() => {
     if (injectedConfig || !open || !doFetch) return
     let cancelled = false
-    doFetch('/api/config')
+    doFetch('/api/config', configNonce > 0 ? { cache: 'no-store' } : undefined)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`config ${r.status}`))))
       .then((data: AppConfig) => {
         if (!cancelled) {
@@ -95,7 +110,7 @@ export function SettingsPanel({
     return () => {
       cancelled = true
     }
-  }, [open, injectedConfig, doFetch])
+  }, [open, injectedConfig, doFetch, configNonce])
 
   const brains = useMemo(() => (config ? brainOptions(config) : []), [config])
   const activeProvider = useMemo(
@@ -157,7 +172,7 @@ export function SettingsPanel({
       <button
         type="button"
         aria-label="Close settings"
-        onClick={onClose}
+        onClick={close}
         className="absolute inset-0 bg-black/60"
       />
       <aside className="relative flex h-full w-full max-w-sm flex-col gap-6 overflow-y-auto border-l border-border/60 bg-background p-6 text-sm text-foreground">
@@ -165,13 +180,24 @@ export function SettingsPanel({
           <h2 className="text-sm font-bold tracking-widest">SETTINGS</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="rounded-sm border border-border/60 px-2 py-1 text-xs tracking-wider text-muted-foreground hover:text-foreground"
           >
             CLOSE
           </button>
         </header>
 
+        {view === 'server-env' ? (
+          <ServerEnvPanel
+            onBack={() => setView('settings')}
+            fetchImpl={fetchImpl}
+            onSaved={() => {
+              setConfigNonce((n) => n + 1)
+              onConfigChanged?.()
+            }}
+          />
+        ) : (
+          <>
         {configError ? (
           <p className="text-xs text-red-400">{configError}</p>
         ) : null}
@@ -291,11 +317,29 @@ export function SettingsPanel({
           options={skins}
         />
 
+        {/* Server env editor entry ------------------------------------------ */}
+        <section className="flex flex-col gap-2 border-t border-border/40 pt-3">
+          <button
+            type="button"
+            onClick={() => setView('server-env')}
+            className="flex items-center justify-between rounded-sm border border-border/60 px-3 py-2 text-xs tracking-widest text-muted-foreground hover:border-accent hover:text-foreground"
+          >
+            <span>SERVER ENV</span>
+            <span aria-hidden="true">→</span>
+          </button>
+          <p className="text-[10px] leading-relaxed text-muted-foreground/60">
+            API keys, agent wires, and knobs — edited on the server, guarded by
+            the settings password.
+          </p>
+        </section>
+
         <footer className="mt-auto border-t border-border/40 pt-3 text-[10px] leading-relaxed text-muted-foreground/70">
-          Provider API keys stay on the server and are never entered here.
-          Unavailable options need the matching env key set server-side. Voice,
+          Provider keys live on the server (.env.local) — edit them under SERVER
+          ENV with the settings password; values are never shown back. Voice,
           STT, and face changes take effect immediately and survive a reload.
         </footer>
+          </>
+        )}
       </aside>
     </div>
   )

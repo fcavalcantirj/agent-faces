@@ -6,10 +6,12 @@ import {
   hasNoBrain,
   resolveActiveProvider,
   selectableBrains,
+  serverEnvRows,
   sttModeOptions,
   ttsEngineOptions,
   type AppConfig,
 } from './panel-model'
+import { ENV_REGISTRY } from './env-registry'
 import {
   createConversationStore,
   DEFAULT_FACE_SKIN,
@@ -239,5 +241,55 @@ describe('conversation settings (voice / STT / skin)', () => {
       ttsEngine: 'web-speech',
       faceSkin: 'eidolon',
     })
+  })
+})
+
+describe('serverEnvRows (used-first ordering for the SERVER ENV view)', () => {
+  const state = (set: string[]) =>
+    Object.fromEntries(ENV_REGISTRY.map((s) => [s.name, { set: set.includes(s.name) }]))
+
+  it('leads with the SET vars in registry order, then the unset tier-1 rows', () => {
+    const rows = serverEnvRows(state(['OPENAI_API_KEY', 'AGENT_BRIDGE_KIND', 'OPENAI_TTS_VOICE']))
+    const primary = rows.primary.map((s) => s.name)
+    // Set vars first (registry order preserved) — including a tier-2 knob in use.
+    expect(primary.slice(0, 3)).toEqual(['OPENAI_API_KEY', 'AGENT_BRIDGE_KIND', 'OPENAI_TTS_VOICE'])
+    // Then every unset tier-1 row, still in registry order.
+    expect(primary.slice(3)).toEqual([
+      'ANTHROPIC_API_KEY',
+      'OPENROUTER_API_KEY',
+      'GROQ_API_KEY',
+      'AGENT_BRIDGE_URL',
+      'AGENT_BRIDGE_KEY',
+      'CLAUDE_CODE_OAUTH_TOKEN',
+    ])
+    // The SHOW ALL bucket holds the remaining unset editables only.
+    expect(rows.more.every((s) => s.tier > 1 && !s.readOnly)).toBe(true)
+    expect(rows.more.map((s) => s.name)).not.toContain('OPENAI_TTS_VOICE')
+    // Deploy gates ride separately, read-only.
+    expect(rows.deploy.map((s) => s.name)).toEqual([
+      'SELF_HOST',
+      'ALLOW_AGENT_BRIDGE_IN_PROD',
+      'FACE_SETTINGS_ALLOW_REMOTE',
+    ])
+  })
+
+  it('a fresh install (nothing set) shows exactly the tier-1 rows first', () => {
+    const rows = serverEnvRows(state([]))
+    expect(rows.primary.map((s) => s.name)).toEqual([
+      'ANTHROPIC_API_KEY',
+      'OPENROUTER_API_KEY',
+      'GROQ_API_KEY',
+      'OPENAI_API_KEY',
+      'AGENT_BRIDGE_KIND',
+      'AGENT_BRIDGE_URL',
+      'AGENT_BRIDGE_KEY',
+      'CLAUDE_CODE_OAUTH_TOKEN',
+    ])
+  })
+
+  it('tolerates a missing vars map (pre-fetch render)', () => {
+    const rows = serverEnvRows(undefined)
+    expect(rows.primary.length).toBeGreaterThan(0)
+    expect(rows.deploy.length).toBe(3)
   })
 })

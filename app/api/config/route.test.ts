@@ -27,6 +27,7 @@ const RELEVANT_KEYS = [
   'ALLOW_AGENT_BRIDGE_IN_PROD',
   'VERCEL',
   'VERCEL_ENV',
+  'FACE_SETTINGS_PASSWORD_HASH',
 ]
 
 /** Start every scenario from a known-empty capability surface. */
@@ -137,5 +138,18 @@ describe('GET /api/config', () => {
     expect(text).not.toContain('sk-')
     expect(text).not.toContain('gsk-')
     expect(text).not.toContain('super-secret')
+  })
+
+  it('reports the settings-editor state as booleans/enum only', async () => {
+    clearKeys()
+    const noPassword = await readConfig()
+    expect(noPassword.body.settings).toEqual({ writable: false, reason: 'no_password' })
+
+    vi.stubEnv('FACE_SETTINGS_PASSWORD_HASH', 'scrypt$16384$8$1$AAAA$BBBB')
+    vi.stubEnv('VERCEL', '1')
+    const onVercel = await readConfig()
+    expect(onVercel.body.settings).toEqual({ writable: false, reason: 'readonly_platform' })
+    // The hash itself must never appear in the payload.
+    expect(onVercel.text).not.toContain('scrypt$')
   })
 })

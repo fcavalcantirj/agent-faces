@@ -47,11 +47,27 @@ cd agent-faces
 node skill/agent-face/scripts/start.mjs    # installs deps, wires env, starts everything, opens the face
 ```
 
-Press **talk**. That's it.
+Press **talk**. That's it. (The launcher offers to set a **settings password** on first
+run — that unlocks editing API keys and env right in the GUI, under Settings → SERVER ENV.)
 
 **Zero keys? Still works.** Speech-to-text runs on **in-browser Whisper** (WebGPU — private,
 offline, $0) and speech-out uses the browser's **Web Speech API**. Add one key — or point it
 at an agent you already run — to unlock hosted models and FFT-grade lip-sync.
+
+<details>
+<summary>Get your keys (each one optional)</summary>
+
+| Key | Where to create it |
+|---|---|
+| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/) → Settings → API keys |
+| `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| `GROQ_API_KEY` | [console.groq.com/keys](https://console.groq.com/keys) — one key = chat brain **and** fast Whisper STT |
+| `OPENAI_API_KEY` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) — hosted STT + TTS voice |
+| `CLAUDE_CODE_OAUTH_TOKEN` | run `claude setup-token` on the machine that runs the Claude Code bridge, complete the browser login, paste the token (subscription auth — never pair it with `ANTHROPIC_API_KEY` on the bridge) |
+
+Set any of them in the GUI (Settings → SERVER ENV, after the launcher's password prompt)
+or in [`.env.example`](.env.example)-style `.env.local`.
+</details>
 
 <details>
 <summary>Prefer the manual route?</summary>
@@ -172,8 +188,10 @@ gracefully. Deep dive: [`skill/agent-face/references/architecture.md`](skill/age
 | `OPENAI_API_KEY` | Hosted Whisper STT + `gpt-4o-mini-tts` voice-out |
 | `AGENT_BRIDGE_KIND` / `AGENT_BRIDGE_URL` / `AGENT_BRIDGE_KEY` | Mode B: wire the face to your running agent |
 | `HERMES_API_BASE_URL` / `HERMES_API_KEY` | Mode B convenience for a Hermes `api_server` |
+| `FACE_SETTINGS_PASSWORD_HASH` | The GUI env editor (Settings → SERVER ENV) — set by the launcher's first-run prompt |
 
-Full list in [`.env.example`](.env.example).
+Full list in [`.env.example`](.env.example). Everything here is editable from the GUI once
+the settings password is set (localhost/self-host; on Vercel use the dashboard).
 </details>
 
 ---

@@ -25,6 +25,11 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  hashPassword,
+  promptForPassword,
+  upsertPasswordHashLine,
+} from "./settings-password.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DEV = join(HERE, "dev.mjs");
@@ -43,6 +48,8 @@ export function parseStartArgs(argv) {
     stop: false,
     takePort: false,
     help: false,
+    password: null,
+    passwordPrompt: true,
     appDir: process.cwd(),
   };
   for (let i = 0; i < argv.length; i++) {
@@ -53,7 +60,12 @@ export function parseStartArgs(argv) {
     else if (a === "--no-open") args.open = false;
     else if (a === "--stop") args.stop = true;
     else if (a === "--take-port") args.takePort = true;
-    else if (a === "--port" || a === "--bridge-port") {
+    else if (a === "--no-password-prompt") args.passwordPrompt = false;
+    else if (a === "--password") {
+      const v = argv[++i];
+      if (!v || v.startsWith("-")) throw new Error(`--password needs a value`);
+      args.password = v;
+    } else if (a === "--port" || a === "--bridge-port") {
       const n = Number(argv[++i]);
       if (!Number.isInteger(n) || n < 1 || n > 65535) {
         throw new Error(`${a} needs a port number, got "${argv[i]}"`);
@@ -66,13 +78,32 @@ export function parseStartArgs(argv) {
   return args;
 }
 
-/** Bridge child env: parent env minus metered credentials, plus yolo mode. */
-export function buildBridgeEnv(env, { yolo }) {
+/**
+ * Bridge child env: parent env minus metered credentials, plus yolo mode.
+ * `fileEnv` (parsed .env.local) may contribute EXACTLY ONE var bridge-ward:
+ * the CLAUDE_CODE_OAUTH_TOKEN subscription token (GUI/setup-token flow) — the
+ * shell env wins, and the ANTHROPIC_* scrub runs LAST so no source can smuggle
+ * a metered key into the subprocess (pinned by test).
+ */
+export function buildBridgeEnv(env, { yolo, fileEnv = {} }) {
   const child = { ...env };
+  if (child.CLAUDE_CODE_OAUTH_TOKEN === undefined && fileEnv.CLAUDE_CODE_OAUTH_TOKEN) {
+    child.CLAUDE_CODE_OAUTH_TOKEN = fileEnv.CLAUDE_CODE_OAUTH_TOKEN;
+  }
   delete child.ANTHROPIC_API_KEY;
   delete child.ANTHROPIC_AUTH_TOKEN;
   if (yolo) child.CLAUDE_BRIDGE_PERMISSION_MODE = "bypassPermissions";
   return child;
+}
+
+/** Minimal KEY=value reader for .env.local (comparison/forwarding only). */
+function parseEnvLite(content) {
+  const out = {};
+  for (const line of content.split("\n")) {
+    const m = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line.trim());
+    if (m) out[m[1]] = m[2];
+  }
+  return out;
 }
 
 /**
@@ -109,6 +140,9 @@ Options:
                      killed (add --take-port to kill it too).
   --take-port        When freeing a port, kill even a holder that is NOT this
                      app's own process (default: refuse with exit 3).
+  --password <pw>    Provision the GUI settings password non-interactively
+                     (first run only; an existing hash is never touched).
+  --no-password-prompt  Skip the first-run settings-password prompt (CI).
   --help, -h         This help.
 
 Behavior:
@@ -176,6 +210,38 @@ async function main() {
     return;
   }
 
+  // Settings-password provisioning (first run): the GUI env editor stays OFF
+  // until a FACE_SETTINGS_PASSWORD_HASH exists — prompt once, skippable, and
+  // an existing line is never touched.
+  const settingsEnvPath = join(args.appDir, ".env.local");
+  const settingsEnvContent = existsSync(settingsEnvPath)
+    ? readFileSync(settingsEnvPath, "utf8")
+    : "";
+  const hasSettingsHash = settingsEnvContent
+    .split("\n")
+    .some((l) => l.trim().startsWith("FACE_SETTINGS_PASSWORD_HASH="));
+  if (!hasSettingsHash) {
+    let pw = args.password;
+    if (!pw && args.passwordPrompt && process.stdin.isTTY) {
+      pw = await promptForPassword(
+        "Set a settings password for GUI env editing (min 12 chars, Enter to skip): ",
+      );
+    }
+    if (pw) {
+      try {
+        writeFileSync(settingsEnvPath, upsertPasswordHashLine(settingsEnvContent, hashPassword(pw)));
+        console.log("settings: password set — SERVER ENV editing is unlocked in the GUI.");
+      } catch (err) {
+        console.error(`settings: ${String(err?.message ?? err)} — skipped.`);
+      }
+    } else if (args.passwordPrompt) {
+      console.log(
+        "settings: no password set — the GUI env editor stays off.\n" +
+          "  Later: node skill/agent-face/scripts/settings-password.mjs",
+      );
+    }
+  }
+
   const bridgeDir = join(args.appDir, "bridge");
   const bridgeAvailable = existsSync(join(bridgeDir, "src", "server.mjs"));
   let bridgeChild = null;
@@ -209,10 +275,15 @@ async function main() {
       process.exit(freed);
     }
     console.log(`bridge: starting on :${args.bridgePort}${args.yolo ? " (yolo)" : ""}…`);
+    // Re-read .env.local at spawn time: provisioning above (or the GUI, via a
+    // previous run) may have added the CLAUDE_CODE_OAUTH_TOKEN we forward.
+    const fileEnv = parseEnvLite(
+      existsSync(envPath) ? readFileSync(envPath, "utf8") : "",
+    );
     bridgeChild = spawn("node", [join(bridgeDir, "src", "server.mjs")], {
       cwd: bridgeDir,
       env: {
-        ...buildBridgeEnv(process.env, { yolo: args.yolo }),
+        ...buildBridgeEnv(process.env, { yolo: args.yolo, fileEnv }),
         CLAUDE_BRIDGE_PORT: String(args.bridgePort),
       },
       stdio: "inherit",
