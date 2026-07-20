@@ -24,6 +24,19 @@ speaks the reply out loud, lip-syncing to the real audio, with **12 emotions** i
 > a fresh API key **or the agent you already run** — with its memory, its tools, its persona.
 > Hosted on Vercel, or self-hosted right next to your agent.
 
+## 🤝 Tested with real agents
+
+| Agent | Works as | Status |
+|---|---|---|
+| **Claude Code** | skill host · Mode B brain (local Agent SDK bridge) | ✅ **Live-verified** — macOS + Raspberry Pi (arm64) |
+| **Hermes** ([our fork](https://github.com/fcavalcantirj/hermes-agent) of NousResearch's hermes-agent) | skill host · Mode B brain (`kind=hermes` → api_server) | ✅ **Live-verified** — installed and wired *by an autonomous agent* on its own Pi; identity **and cross-turn memory** confirmed |
+| **Anthropic · OpenRouter · Groq** (Mode A keys) | hosted brain | 🧪 Adapters fully tested — live reports welcome |
+| **Ollama** | Mode B brain (`kind=ollama`) | 🧪 Adapter fully tested — live reports welcome |
+| **openclaw** / any OpenAI-compatible endpoint | Mode B brain | 🧪 Same wire contract as the live-verified bridges — live reports welcome |
+| **trustclaw · nanoclaw** | skill host | 📋 Designed to the open [Agent Skills](https://agentskills.io) standard |
+
+Ran it with an agent not listed here? [Open an issue](https://github.com/fcavalcantirj/agent-faces/issues) with your evidence and claim the row.
+
 ---
 
 ## ⚡ 60-second start
