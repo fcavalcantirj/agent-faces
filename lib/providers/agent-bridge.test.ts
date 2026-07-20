@@ -221,49 +221,87 @@ describe('agent-bridge adapter — openai-compatible (SSE)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Hermes — session create then chat with X-Hermes-Session-Key
+// Hermes — OpenAI-shaped single call with X-Hermes-Session-Id continuity.
+// Contract verified LIVE against NousResearch/hermes-agent (2026-07-20):
+// there is NO session-create endpoint; the id arrives as a RESPONSE header
+// and is sent back on later turns to continue the agent's own session.
 // ---------------------------------------------------------------------------
 
-describe('agent-bridge adapter — hermes session flow', () => {
-  it('creates a session then chats, sending only the latest user turn', async () => {
+describe('agent-bridge adapter — hermes session-header flow', () => {
+  it('posts /v1/chat/completions with only the latest user turn; captures X-Hermes-Session-Id and resends it', async () => {
     const { fn, calls } = fakeFetch((url) => {
-      if (url.endsWith('/api/sessions')) {
-        return new Response(JSON.stringify({ id: 'sess-1', key: 'sk-1' }), { status: 200 })
-      }
-      expect(url).toBe('http://localhost:8080/api/sessions/sess-1/chat')
+      expect(url).toBe('http://localhost:8642/v1/chat/completions')
       return new Response(
         sseStream([
-          `data: ${JSON.stringify({ message: { content: 'Hi ' } })}\n\n`,
-          `data: ${JSON.stringify({ message: { content: 'there' }, done: true })}\n\n`,
+          `data: ${JSON.stringify({ choices: [{ delta: { content: 'Hi ' } }] })}\n\n`,
+          `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\n`,
           'data: [DONE]\n\n',
         ]),
-        { status: 200, headers: { 'content-type': 'text/event-stream' } },
+        {
+          status: 200,
+          headers: {
+            'content-type': 'text/event-stream',
+            'X-Hermes-Session-Id': 'api-abc123',
+          },
+        },
       )
     })
     const adapter = createAgentBridgeAdapter({ fetch: fn })
+    const env = { HERMES_API_BASE_URL: 'http://localhost:8642', HERMES_API_KEY: 'hk' }
+
     const events = await collect(
       adapter.streamChat(
         {
+          system: 'face persona',
           messages: [
             { role: 'user', content: 'a' },
             { role: 'assistant', content: 'b' },
             { role: 'user', content: 'c' },
           ],
         },
-        { HERMES_API_BASE_URL: 'http://localhost:8080', HERMES_API_KEY: 'hk' },
+        env,
       ),
     )
     expect(events).toEqual([
       { type: 'delta', text: 'Hi ' },
-      { type: 'delta', text: 'there' },
       { type: 'done', reason: 'stop' },
     ])
-    // Stateful agent: only the latest user turn is sent, not full history.
-    const chatCall = calls.find((c) => c.url.endsWith('/chat'))!
-    const chatBody = JSON.parse(chatCall.init.body as string)
-    expect(chatBody.message).toBe('c')
-    const chatHeaders = chatCall.init.headers as Record<string, string>
-    expect(chatHeaders['X-Hermes-Session-Key']).toBe('sk-1')
+
+    // First turn: Bearer auth, NO session header yet, latest user turn only.
+    const h1 = calls[0].init.headers as Record<string, string>
+    expect(h1.Authorization).toBe('Bearer hk')
+    expect(h1['X-Hermes-Session-Id']).toBeUndefined()
+    const b1 = JSON.parse(calls[0].init.body as string)
+    expect(b1.stream).toBe(true)
+    expect(b1.messages).toEqual([
+      { role: 'system', content: 'face persona' },
+      { role: 'user', content: 'c' },
+    ])
+
+    // Second turn: the captured id rides along — the agent keeps the thread.
+    await collect(adapter.streamChat({ messages: [{ role: 'user', content: 'd' }] }, env))
+    const h2 = calls[1].init.headers as Record<string, string>
+    expect(h2['X-Hermes-Session-Id']).toBe('api-abc123')
+    const b2 = JSON.parse(calls[1].init.body as string)
+    expect(b2.messages).toEqual([{ role: 'user', content: 'd' }])
+  })
+
+  it('tolerates a server that returns no session header (falls back to stateless turns)', async () => {
+    const { fn, calls } = fakeFetch(() =>
+      new Response(
+        sseStream([
+          `data: ${JSON.stringify({ choices: [{ delta: { content: 'x' }, finish_reason: 'stop' }] })}\n\n`,
+          'data: [DONE]\n\n',
+        ]),
+        { status: 200, headers: { 'content-type': 'text/event-stream' } },
+      ),
+    )
+    const adapter = createAgentBridgeAdapter({ fetch: fn })
+    const env = { HERMES_API_BASE_URL: 'http://localhost:8642' }
+    await collect(adapter.streamChat({ messages: [{ role: 'user', content: 'a' }] }, env))
+    await collect(adapter.streamChat({ messages: [{ role: 'user', content: 'b' }] }, env))
+    const h2 = calls[1].init.headers as Record<string, string>
+    expect(h2['X-Hermes-Session-Id']).toBeUndefined()
   })
 })
 

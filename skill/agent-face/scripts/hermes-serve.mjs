@@ -96,12 +96,18 @@ export function parseServeArgs(argv) {
 /**
  * Explicit or documented-default only. The default is the dedicated-profile
  * gateway run — never the user's default profile (that is the live agent).
+ * Field-verified: standard venv installs keep the console script OFF PATH at
+ * ~/.hermes/hermes-agent/venv/bin/hermes, so that path is a real candidate.
  */
-export function resolveLaunchCommand({ cmdArg, env, profile, hermesExists }) {
+export function resolveLaunchCommand({ cmdArg, env, profile, hermesExists, venvHermes }) {
   if (cmdArg) return { source: "flag", command: cmdArg };
   if (env.HERMES_SERVE_CMD) return { source: "env", command: env.HERMES_SERVE_CMD };
   if (hermesExists()) {
     return { source: "hermes-cli", command: `hermes -p ${profile} gateway run` };
+  }
+  const venv = venvHermes();
+  if (venv) {
+    return { source: "hermes-venv", command: `"${venv}" -p ${profile} gateway run` };
   }
   return null;
 }
@@ -117,6 +123,14 @@ export function envLines(port, key) {
 
 export function pidfilePath(port, dir = process.cwd()) {
   return join(dir, `.hermes-serve-${port}.pid`);
+}
+
+/** Standard venv install location for the hermes console script (off PATH). */
+function venvHermesPath(env = process.env) {
+  const home = env.HOME ?? env.USERPROFILE ?? "";
+  if (!home) return null;
+  const p = join(home, ".hermes", "hermes-agent", "venv", "bin", "hermes");
+  return existsSync(p) ? p : null;
 }
 
 function hermesOnPath(env = process.env) {
@@ -228,15 +242,21 @@ async function main() {
     env: process.env,
     profile: args.profile,
     hermesExists: () => hermesOnPath(),
+    venvHermes: () => venvHermesPath(),
   });
   if (!resolved) {
     console.error(
-      `✗ No \`hermes\` binary on PATH and no launch command given.\n` +
+      `✗ No \`hermes\` on PATH, none at ~/.hermes/hermes-agent/venv/bin/hermes, ` +
+        `and no launch command given.\n` +
         `  Pass --cmd "<your launch command>" (or set HERMES_SERVE_CMD).\n` +
         `  Recipe + the memory-sharing alternative: references/backends.md.`,
     );
     process.exit(2);
   }
+  console.log(
+    `Note: the dedicated profile must exist first — \`hermes profile create ${args.profile}\` ` +
+      `(one-time; the gateway will say so and exit if it doesn't).`,
+  );
 
   const key = args.key ?? randomBytes(16).toString("hex");
   console.log(`Launching (${resolved.source}): ${resolved.command}`);

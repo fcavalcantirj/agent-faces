@@ -153,6 +153,18 @@ already-answering port and only ever launches a non-default profile. Remote
 face? `API_SERVER_HOST` defaults to loopback — tunnel or bind wider yourself,
 deliberately.
 
+Field-verified notes (real arm64 install, 2026-07-20):
+- Standard venv installs keep the console script **off PATH** at
+  `~/.hermes/hermes-agent/venv/bin/hermes`; `hermes-serve` checks there too.
+- The dedicated profile must exist first: `hermes profile create api`
+  (one-time, plus its model/auth config) — the gateway exits with that exact
+  hint otherwise.
+- The wire contract the app's `hermes` kind speaks: one OpenAI-shaped
+  `POST /v1/chat/completions` per turn (`Bearer` key, model id
+  `hermes-agent`); the session id arrives as the **`X-Hermes-Session-Id`
+  response header** and is echoed back on later turns — the agent's own
+  memory carries the thread. There is no session-create endpoint.
+
 ### `claude-code`: the local Agent SDK bridge
 
 The agent-faces repo ships a ready-made local bridge for this kind at

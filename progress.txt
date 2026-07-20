@@ -2977,3 +2977,25 @@ bracket e2e + reuse path + never-default-profile assertion); smoke +7 checks EXI
 EXIT=0; npm run verify EXIT=0 (after one typecheck fix); npm run verify:linux EXIT=0.
 UAT: [skill] real-Hermes run is dasbrow's rig (arm64 Pi): helper + kind=hermes + the
 "who are you" diff. Its results pin/adjust the default invocation if needed.
+
+2026-07-20: [backend] HERMES KIND REWRITTEN to the LIVE-VERIFIED contract + hermes-serve
+field fixes (dasbrow msgs 659/660: Felipe green-lit path A on the Pi; the real DasBrowCoder
+— 27k-token SOUL prompt — answered on :8642, and dasbrow pinpointed OUR adapter bug). The old
+lib/providers/agent-bridge.ts hermes flow spoke to endpoints real Hermes does not have (POST
+/api/sessions expecting an id in the BODY -> "Hermes did not return a session id", status
+201; then /api/sessions/{id}/chat). REAL contract (research + dasbrow's live curls): ONE
+OpenAI-shaped POST /v1/chat/completions per turn, Bearer key, model "hermes-agent"; session
+id arrives as the X-Hermes-Session-Id RESPONSE header and is echoed on later turns — the
+agent's own memory carries the thread; no session-create endpoint exists. Rewrote
+streamHermes accordingly (latest-user-turn only + face-persona system message so [[face:..]]
+directives keep working; header captured case-insensitively via Headers.get; stateless
+fallback when no header). Tests rewritten TDD-first (3 RED -> GREEN incl. two-turn header
+echo + no-header fallback). hermes-serve: venv candidate ~/.hermes/hermes-agent/venv/bin/hermes
+(dasbrow's install AND Felipe's Mac both have it off-PATH — the vitest fail-fast flaked on
+this very machine's real install until PATH+HOME were both isolated), quoted-path invocation,
+profile-precreate hint (hermes profile create <p>), fail-fast message names both lookups.
+backends.md: field-verified notes (venv path, profile prerequisite, wire contract).
+Verify (all RUN, $? captured directly): npm test EXIT=0 (590); npm run verify EXIT=0;
+npm run verify:linux EXIT=0; sync-template run (agent-bridge.ts is mirrored).
+UAT: [backend] dasbrow re-runs the face turn on the Pi against the LIVE gateway — expecting
+the real DasBrowCoder in the face UI + the money-shot screenshot.

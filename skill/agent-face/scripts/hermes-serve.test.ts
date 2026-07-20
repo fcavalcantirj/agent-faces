@@ -106,6 +106,7 @@ describe("parseServeArgs", () => {
 describe("resolveLaunchCommand", () => {
   const hermesPresent = () => true;
   const hermesAbsent = () => false;
+  const noVenv = () => null;
 
   it("--cmd wins over everything", () => {
     expect(
@@ -114,6 +115,7 @@ describe("resolveLaunchCommand", () => {
         env: { HERMES_SERVE_CMD: "not-this" },
         profile: "api",
         hermesExists: hermesPresent,
+        venvHermes: noVenv,
       }),
     ).toEqual({ source: "flag", command: "run-this" });
   });
@@ -125,6 +127,7 @@ describe("resolveLaunchCommand", () => {
         env: { HERMES_SERVE_CMD: "env-cmd" },
         profile: "api",
         hermesExists: hermesPresent,
+        venvHermes: noVenv,
       }),
     ).toEqual({ source: "env", command: "env-cmd" });
   });
@@ -135,14 +138,37 @@ describe("resolveLaunchCommand", () => {
       env: {},
       profile: "api",
       hermesExists: hermesPresent,
+      venvHermes: noVenv,
     });
     expect(r).toEqual({ source: "hermes-cli", command: "hermes -p api gateway run" });
     expect(r!.command).toContain("-p "); // the live default-profile gateway must be unreachable from here
   });
 
-  it("no hermes binary, no override: null (fail-fast at the CLI layer)", () => {
+  it("standard venv install (no PATH binary): uses the quoted ~/.hermes venv console script", () => {
+    // Field-verified on a real install: the console script lives at
+    // ~/.hermes/hermes-agent/venv/bin/hermes and is NOT on PATH.
+    const r = resolveLaunchCommand({
+      cmdArg: null,
+      env: {},
+      profile: "api",
+      hermesExists: hermesAbsent,
+      venvHermes: () => "/home/browbot/.hermes/hermes-agent/venv/bin/hermes",
+    });
+    expect(r).toEqual({
+      source: "hermes-venv",
+      command: '"/home/browbot/.hermes/hermes-agent/venv/bin/hermes" -p api gateway run',
+    });
+  });
+
+  it("no hermes anywhere, no override: null (fail-fast at the CLI layer)", () => {
     expect(
-      resolveLaunchCommand({ cmdArg: null, env: {}, profile: "api", hermesExists: hermesAbsent }),
+      resolveLaunchCommand({
+        cmdArg: null,
+        env: {},
+        profile: "api",
+        hermesExists: hermesAbsent,
+        venvHermes: noVenv,
+      }),
     ).toBeNull();
   });
 });
@@ -169,7 +195,13 @@ describe("hermes-serve CLI contract", () => {
   });
 
   it("fails fast (exit 2) with no hermes binary and no override, naming --cmd and backends.md", () => {
-    const env: NodeJS.ProcessEnv = { ...process.env, PATH: NODE_ONLY_PATH };
+    // Hermetic on machines with a REAL install: node-only PATH kills the
+    // PATH lookup, an empty HOME kills the ~/.hermes venv candidate.
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      PATH: NODE_ONLY_PATH,
+      HOME: mkdtempSync(join(tmpdir(), "hermes-serve-nohome-")),
+    };
     delete env.HERMES_SERVE_CMD;
     const r = runServe(["--port", "8643"], { env });
     expect(r.status).toBe(2);

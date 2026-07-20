@@ -4,11 +4,12 @@
 //
 //   • ollama            — POST {url}/api/chat (stream:true, NDJSON); models via
 //                         {url}/api/tags. Stateless per call → full history sent.
-//   • hermes            — Hermes `api_server` session flow: ensureSession via
-//                         POST {url}/api/sessions, then POST
-//                         {url}/api/sessions/{id}/chat with X-Hermes-Session-Key.
-//                         Stateful → we send ONLY the latest user turn (the agent
-//                         keeps the thread), not the whole history.
+//   • hermes            — Hermes `api_server`: OpenAI-shaped POST
+//                         {url}/v1/chat/completions; session continuity via the
+//                         X-Hermes-Session-Id RESPONSE header, echoed back on
+//                         later turns (contract verified live against
+//                         NousResearch/hermes-agent — no session-create endpoint
+//                         exists). Stateful → we send ONLY the latest user turn.
 //   • openclaw          } OpenAI-compatible bridges: POST {url}/v1/chat/completions
 //   • claude-code       } parsed as SSE. These expose the running agent behind a
 //   • openai-compatible } standard chat-completions endpoint.
@@ -274,19 +275,13 @@ export interface AgentBridgeAdapterDeps {
   fetch?: typeof fetch
 }
 
-/** A live Hermes session (created once per adapter instance, then reused). */
-interface HermesSession {
-  id: string
-  key: string
-}
-
 /** Construct the agent-bridge `ChatAdapter`. Registered in `lib/providers/index.ts`. */
 export function createAgentBridgeAdapter(deps: AgentBridgeAdapterDeps = {}): ChatAdapter {
   const fetchImpl = deps.fetch ?? globalThis.fetch
 
-  // A stable session/thread the running Hermes agent keeps memory against, so we
-  // never resend the whole history. Created lazily, then reused across requests.
-  let hermesSession: HermesSession | null = null
+  // The session the running Hermes agent keeps memory against. Captured from
+  // the first response's X-Hermes-Session-Id header, echoed on later turns.
+  let hermesSessionId: string | null = null
 
   /** Turn a fetch failure into a clear "agent offline" error (or preserve abort). */
   function offlineError(base: string, kind: BridgeKind, err: unknown): AdapterError {
@@ -393,70 +388,43 @@ export function createAgentBridgeAdapter(deps: AgentBridgeAdapterDeps = {}): Cha
     yield* pumpJsonEvents(parseSSEStream(res.body as ReadableStream<Uint8Array>, { provider: ID }), req)
   }
 
-  /** Ensure a Hermes session exists (create once, then reuse the id + key). */
-  async function ensureHermesSession(
-    base: string,
-    key: string | undefined,
-    signal?: AbortSignal,
-  ): Promise<HermesSession> {
-    if (hermesSession) return hermesSession
-    let res: Response
-    try {
-      res = await fetchImpl(`${base}/api/sessions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders(key) },
-        body: JSON.stringify({}),
-        ...(signal ? { signal } : {}),
-      })
-    } catch (err) {
-      throw offlineError(base, 'hermes', err)
-    }
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      throw errorForStatus(res.status, ID, detail.slice(0, 200))
-    }
-    let json: Record<string, unknown>
-    try {
-      json = (await res.json()) as Record<string, unknown>
-    } catch {
-      json = {}
-    }
-    const id = json.id ?? json.session_id ?? json.sessionId
-    const sk = json.key ?? json.session_key ?? json.sessionKey ?? key
-    if (id === undefined || id === null || String(id).length === 0) {
-      throw new AdapterError('upstream_error', 'Hermes did not return a session id.', {
-        provider: ID,
-        status: res.status,
-      })
-    }
-    hermesSession = { id: String(id), key: sk ? String(sk) : '' }
-    return hermesSession
-  }
-
-  /** Hermes: create/reuse a session, send ONLY the latest user turn (stateful). */
+  /**
+   * Hermes api_server: one OpenAI-shaped call per turn. The agent holds the
+   * thread server-side — we send ONLY the latest user turn (+ the face
+   * persona as a system message) and echo X-Hermes-Session-Id, captured from
+   * the previous response's headers, so the agent's own memory carries the
+   * conversation. Verified live: no session-create endpoint exists.
+   */
   async function* streamHermes(
     base: string,
     key: string | undefined,
+    model: string | undefined,
     req: ChatRequest,
   ): AsyncIterable<StreamEvent> {
-    const session = await ensureHermesSession(base, key, req.signal)
+    const messages: Array<{ role: 'system' | 'user'; content: string }> = []
+    if (req.system) messages.push({ role: 'system', content: req.system })
+    messages.push({ role: 'user', content: lastUserContent(req.messages) })
     const body: Record<string, unknown> = {
-      message: lastUserContent(req.messages),
+      model: model || 'hermes-agent',
+      messages,
+      max_tokens: MAX_TOKENS,
       stream: true,
     }
-    if (req.system) body.system = req.system
+    if (typeof req.temperature === 'number') body.temperature = req.temperature
     const headers: Record<string, string> = {
-      'X-Hermes-Session-Key': session.key,
       ...authHeaders(key),
+      ...(hermesSessionId ? { 'X-Hermes-Session-Id': hermesSessionId } : {}),
     }
     const res = await postStreaming(
-      `${base}/api/sessions/${encodeURIComponent(session.id)}/chat`,
+      `${base}/v1/chat/completions`,
       body,
       headers,
       'hermes',
       base,
       req.signal,
     )
+    const sid = res.headers.get('x-hermes-session-id')
+    if (sid) hermesSessionId = sid
     // Hermes may stream as SSE or NDJSON; pick the transport by content-type.
     const ct = res.headers.get('content-type') ?? ''
     const frames = ct.includes('event-stream')
@@ -523,7 +491,7 @@ export function createAgentBridgeAdapter(deps: AgentBridgeAdapterDeps = {}): Cha
       if (kind === 'ollama') {
         yield* streamOllama(base, key, model, req)
       } else if (kind === 'hermes') {
-        yield* streamHermes(base, key, req)
+        yield* streamHermes(base, key, model, req)
       } else {
         yield* streamOpenAICompatible(base, key, model, kind, req)
       }

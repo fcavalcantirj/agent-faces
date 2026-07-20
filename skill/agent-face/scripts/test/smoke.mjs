@@ -343,11 +343,12 @@ async function testHermesServe() {
     /hermes/i.test(r.out) && /--cmd/.test(r.out) && /gateway/i.test(r.out),
   );
 
-  // Hermetic fail-fast: node-only PATH so a real `hermes` binary (dasbrow's
-  // Pi runs this suite!) can't turn the no-entrypoint path into a launch.
+  // Hermetic fail-fast: node-only PATH kills the PATH lookup, an empty HOME
+  // kills the ~/.hermes venv candidate — a real install (dasbrow's Pi, or
+  // this very machine) must not flip the no-entrypoint path into a launch.
   const nodeOnlyPath = `${dirname(process.execPath)}:/usr/bin:/bin`;
   r = runNode([HERMES_SERVE, "--port", "8643"], {
-    env: cleanEnv({ PATH: nodeOnlyPath, HERMES_SERVE_CMD: "" }),
+    env: cleanEnv({ PATH: nodeOnlyPath, HERMES_SERVE_CMD: "", HOME: mkTmp("smoke-hermes-nohome-") }),
   });
   check("hermes-serve fails fast (exit 2) with no entrypoint", r.status === 2, `exit ${r.status}`);
   check("fail-fast names --cmd", /--cmd/.test(r.out));
