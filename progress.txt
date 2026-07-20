@@ -3115,3 +3115,28 @@ it stages via git ls-files, worth remembering for new files); full e2e EXIT=0 (1
 UAT: [latency] human speaks one turn and confirms the LAT row appears in the HUD corner
 with TTFW roughly matching a stopwatch; [latency] a claude-code bridge turn logs
 [bridge-timing] lines on the bridge stderr.
+
+2026-07-20: [analysis] FIRST MEASURED TTFW TIMELINE (Task 2b — the ruler ran the same day
+it shipped; 12 bridge turns via curl + 5 full browser turns via headed playwright, all
+[REAL], raw lines in the room msg 675 + below). WHERE THE TIME GOES (claude-code kind,
+web-speech TTS, this Mac): bridge subprocess spawn+init ~1.1s median RESUMED / ~2.0s fresh
+(EVERY turn pays it); model TTFT through the CLI ~2.1s median with ONE 13.4s TAIL
+(ackSynthetic:false — pure model/CLI side, resumed turn; this IS Felipe's "8-15s" felt
+king, not the spawn); app-route/SSE overhead 30-120ms (negligible); STT surprise — the rig
+runs HOSTED whisper-1 (OPENAI_API_KEY lives in the shell env; no GROQ key): upstream 2.8s
+cold / 1.1s warm; sentence-gap flush 0-440ms observed; web-speech audible start 10-205ms
+(fine); VAD tail 1400ms constant (hands-free only). TYPICAL WARM PTT VOICE TURN TODAY:
+~4.6s speak-stop→first-word; hands-free ≈ 6.0s; observed worst 16.1s. RANKED PROPOSALS
+(sent to Felipe, AWAITING HIS APPROVAL — nothing implemented, per his gating instruction):
+1) warm persistent bridge session (kills 1.1-2.0s/turn guaranteed; hypothesis: compresses
+the 13.4s tail too since the CLI reloads the session file every spawn; requirement from
+his review: conversation reset must recycle the warm Query); 2) STT — add GROQ_API_KEY
+(whisper-large-v3-turbo, likely halves upstream) or pre-cache browser whisper (env change
+= Felipe-only); 3) VAD redemption 1400→~700 as a runtime option (-0.7s hands-free);
+4) first-sentence immediate flush (≤-0.35s when it bites); 5) TTS start already fine.
+Projected post-1..4: PTT ≈ 2.8-3.2s, hands-free ≈ 3.5-3.9s. NOT measured here: Mode A
+(no keys on this rig), browser-whisper decode (hosted won the auto-route), hermes (cell 9
+asked of dasbrow in msg 675, same line format). Ports/processes cleaned after the session.
+UAT: [latency] Felipe speaks a few real turns and pastes copy(__agentFaceLatency.dump())
+— his lived lines are the ground truth the lab runs supplement; and the "does it FEEL
+fast" verdict after the approved wins land.
