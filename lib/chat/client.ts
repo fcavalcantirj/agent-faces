@@ -201,6 +201,11 @@ export function splitSentences(text: string): { sentences: string[]; rest: strin
  * Short: only a token gap separates it from being spoken; decimals like "3."
  * are safe because their next delta arrives in milliseconds and re-arms. */
 export const SENTENCE_GAP_FLUSH_MS = 350
+/** Faster gap for the FIRST sentence of a reply — nothing is being spoken yet,
+ * so every buffered millisecond is pure added time-to-first-word. Floor: must
+ * stay ≥50ms so a first-sentence decimal's next delta ("3." → "14") still
+ * re-arms the timer before it fires (contract pinned in the test suite). */
+export const FIRST_SENTENCE_GAP_FLUSH_MS = 80
 /** Stream silence (ms) after which even a clause with NO terminator is spoken —
  * a long stall means the agent went off to do tool work; a talking face must
  * not sit on words it already has (live finding, 2026-07-19). */
@@ -218,7 +223,7 @@ export interface RunChatOptions {
   /** An external signal to also abort on (in addition to the internal one). */
   signal?: AbortSignal
   /** Gap-flush tuning override (tests). Defaults to the exported constants. */
-  flushDelays?: { sentenceGapMs?: number; stallMs?: number }
+  flushDelays?: { sentenceGapMs?: number; stallMs?: number; firstSentenceGapMs?: number }
 }
 
 /** Lifecycle callbacks the orchestrator wires to emotion + TTS. */
@@ -287,6 +292,7 @@ export function runChat(
   let raw = ''
   let buffer = ''
   let firstToken = false
+  let spokenSentences = 0
 
   // DETERMINISTIC SPEECH FLUSH. The splitter's followed-by-whitespace rule is
   // right for an uninterrupted stream, but it strands a phrase that ends the
@@ -297,12 +303,23 @@ export function runChat(
   // thing never spoken; the done-flush strips it as always.
   const sentenceGapMs = opts.flushDelays?.sentenceGapMs ?? SENTENCE_GAP_FLUSH_MS
   const stallMs = opts.flushDelays?.stallMs ?? STALL_FLUSH_MS
+  const firstSentenceGapMs =
+    opts.flushDelays?.firstSentenceGapMs ?? FIRST_SENTENCE_GAP_FLUSH_MS
   let flushTimer: ReturnType<typeof setTimeout> | null = null
   const clearFlushTimer = () => {
     if (flushTimer !== null) {
       clearTimeout(flushTimer)
       flushTimer = null
     }
+  }
+  // Every spoken sentence goes through here so the first-sentence fast tier
+  // can count them. A pure [[face:…]] chunk is not spoken — and not counted,
+  // so the NEXT real sentence still gets the fast gap.
+  const emitSentence = (sentence: string) => {
+    const { text } = parseFaceDirective(sentence)
+    if (!text) return
+    spokenSentences += 1
+    callbacks.onSentence?.(text)
   }
   const flushBufferedSpeech = () => {
     flushTimer = null
@@ -312,15 +329,18 @@ export function runChat(
     if (/\[\[[^\]]*$/.test(pending)) return // never speak a half-open directive
     buffer = ''
     const { sentences } = splitSentences(`${pending}\n`)
-    for (const sentence of sentences) {
-      const { text } = parseFaceDirective(sentence)
-      if (text) callbacks.onSentence?.(text)
-    }
+    for (const sentence of sentences) emitSentence(sentence)
   }
   const armFlushTimer = () => {
     clearFlushTimer()
     if (!buffer.trim()) return
-    const ms = /[.!?]["')\]]?\s*$/.test(buffer) ? sentenceGapMs : stallMs
+    // A terminal-punctuated tail flushes fast while NOTHING has been spoken
+    // yet (TTS is starving); once a sentence is out, the normal gap applies.
+    const ms = /[.!?]["')\]]?\s*$/.test(buffer)
+      ? spokenSentences === 0
+        ? firstSentenceGapMs
+        : sentenceGapMs
+      : stallMs
     flushTimer = setTimeout(flushBufferedSpeech, ms)
   }
 
@@ -378,8 +398,7 @@ export function runChat(
         buffer = rest
         for (const sentence of sentences) {
           if (controller.signal.aborted) break
-          const { text } = parseFaceDirective(sentence)
-          if (text) callbacks.onSentence?.(text)
+          emitSentence(sentence)
         }
         armFlushTimer()
       }
@@ -407,10 +426,7 @@ export function runChat(
 
     // Clean completion: flush the remaining buffered tail (directive-stripped).
     const tail = buffer.trim()
-    if (tail) {
-      const { text } = parseFaceDirective(tail)
-      if (text) callbacks.onSentence?.(text)
-    }
+    if (tail) emitSentence(tail)
     buffer = ''
 
     const result = settle({ reason })

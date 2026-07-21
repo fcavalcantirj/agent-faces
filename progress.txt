@@ -3406,3 +3406,25 @@ contract); npm run typecheck EXIT=0; npm test EXIT=0 (701); npm run verify EXIT=
 (6 gates); npm run verify:linux EXIT=0; sync-template run (86 files, 5 updated).
 UAT: [settings] flip HANDS-FREE PAUSE to Relaxed and confirm the face waits longer
 before answering hands-free; HUD readout shows VAD 0.7 on Snappy.
+
+2026-07-21: [frontend] FIRST-SENTENCE FAST FLUSH (latency win #3, the last approved code
+win): while NOTHING has been spoken yet, a terminal-punctuated buffer now flushes to TTS
+after 80ms instead of 350ms — the reply's first words leave up to 270ms sooner exactly
+when the face is silent and every buffered millisecond is felt. NEW in
+lib/chat/client.ts: FIRST_SENTENCE_GAP_FLUSH_MS = 80 (floor contract ≥50ms pinned by an
+invariant test — a first-sentence decimal's "3."→"14" re-arm window is 50ms);
+spokenSentences counter fed by a single emitSentence() helper that now owns ALL THREE
+onSentence sites (sync split / gap flush / done tail) — a pure [[face:…]] directive
+chunk is not spoken and NOT counted, so the next real sentence still gets the fast
+tier; armFlushTimer picks firstSentenceGapMs only while spokenSentences === 0 and the
+tail is terminal-punctuated (STALL tier untouched); flushDelays seam gains
+firstSentenceGapMs (tests only — the sole production caller passes no flushDelays).
+GUARD TEST included: the SECOND sentence still waits the full 350ms (TTS already has
+material — the fast tier must not apply); decimal re-arm at 50ms and half-open-directive
+holds re-verified green unchanged.
+Verify (all RUN, $? captured directly): RED 3 (missing constant / 350ms first flush /
+unknown override key) → GREEN; client 18/18 + tests/chat.stream + client-boundary =
+28/28; npm run typecheck EXIT=0; npm test EXIT=0 (704); npm run verify EXIT=0 (6
+gates); npm run verify:linux EXIT=0; sync-template run (1 file updated).
+UAT: [latency] felt check — the face starts speaking noticeably sooner on short first
+sentences ("On it." before tool work); covered by the Task-4 measurement below.

@@ -11,6 +11,8 @@ import {
   streamChat,
   runChat,
   splitSentences,
+  FIRST_SENTENCE_GAP_FLUSH_MS,
+  SENTENCE_GAP_FLUSH_MS,
   type ChatResult,
 } from '@/lib/chat/client'
 import { AdapterError, type StreamEvent } from '@/lib/providers'
@@ -250,6 +252,74 @@ describe('runChat gap flush (deterministic speech — 2026-07-19 live finding)',
       g3.open()
       await session.done
       expect(sentences).toEqual(['pi is 3.14 exactly.'])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('encodes the decimal-safety contract: the fast first gap is ≥50ms and below the normal gap', () => {
+    // 50ms is the observed re-arm window for a first-sentence decimal ("3." →
+    // "14"); the fast gap must never dip under it, and must actually be fast.
+    expect(FIRST_SENTENCE_GAP_FLUSH_MS).toBeGreaterThanOrEqual(50)
+    expect(FIRST_SENTENCE_GAP_FLUSH_MS).toBeLessThan(SENTENCE_GAP_FLUSH_MS)
+  })
+
+  it('flushes the FIRST terminal-punctuated buffer at the fast gap — nothing is speaking yet', async () => {
+    vi.useFakeTimers()
+    try {
+      const g = gate()
+      const fetchImpl = makeFetch([delta('On it.'), async () => (await g.p, doneFrame('stop'))])
+      const log: string[] = []
+      const session = runChat({ ...REQ, fetchImpl }, { onSentence: (s) => log.push(s) })
+      await vi.advanceTimersByTimeAsync(49) // inside the decimal-guard floor: still quiet
+      expect(log).toHaveLength(0)
+      await vi.advanceTimersByTimeAsync(51) // 100ms total: past the fast gap, far below 350
+      expect(log).toEqual(['On it.'])
+      g.open()
+      await session.done
+      expect(log).toEqual(['On it.']) // no re-speak at done
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('the SECOND sentence still waits the full sentence gap (something is already speakable)', async () => {
+    vi.useFakeTimers()
+    try {
+      const g = gate()
+      const fetchImpl = makeFetch([delta('One. Two.'), async () => (await g.p, doneFrame('stop'))])
+      const log: string[] = []
+      const session = runChat({ ...REQ, fetchImpl }, { onSentence: (s) => log.push(s) })
+      // 'One.' splits synchronously (terminator + whitespace, no delay at all);
+      // 'Two.' strands at buffer end and waits the NORMAL gap — TTS already
+      // has material, so the fast tier must not apply.
+      await vi.advanceTimersByTimeAsync(100)
+      expect(log).toEqual(['One.'])
+      await vi.advanceTimersByTimeAsync(300) // 400ms total: past SENTENCE_GAP_FLUSH_MS
+      expect(log).toEqual(['One.', 'Two.'])
+      g.open()
+      await session.done
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('honors the flushDelays.firstSentenceGapMs override (test seam)', async () => {
+    vi.useFakeTimers()
+    try {
+      const g = gate()
+      const fetchImpl = makeFetch([delta('On it.'), async () => (await g.p, doneFrame('stop'))])
+      const log: string[] = []
+      const session = runChat(
+        { ...REQ, fetchImpl, flushDelays: { firstSentenceGapMs: 500 } },
+        { onSentence: (s) => log.push(s) },
+      )
+      await vi.advanceTimersByTimeAsync(400) // past BOTH defaults: proves neither fired
+      expect(log).toHaveLength(0)
+      await vi.advanceTimersByTimeAsync(200) // past the 500ms override
+      expect(log).toEqual(['On it.'])
+      g.open()
+      await session.done
     } finally {
       vi.useRealTimers()
     }
