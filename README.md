@@ -115,8 +115,6 @@ Full contract + per-agent wiring: [`skill/agent-face/references/backends.md`](sk
   mouth driven by the actual audio via `wawa-lipsync`. The model steers its own expression by
   emitting `[[face:happy]]`-style directives mid-reply.
 
-![Agent Faces speaking](public/screenshots/talking.png)
-
 ---
 
 ## 🚀 Deploy — your pick
