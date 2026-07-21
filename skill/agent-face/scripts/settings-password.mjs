@@ -21,14 +21,18 @@ export const MIN_PASSWORD_LENGTH = 12;
 const SCRYPT = { N: 16384, r: 8, p: 1 };
 const KEY_LEN = 32;
 
-/** `scrypt$N$r$p$<salt b64url>$<hash b64url>` — same format as env-admin.ts. */
+/**
+ * `scrypt:N:r:p:<salt b64url>:<hash b64url>` — same format as env-admin.ts.
+ * Colon-separated ON PURPOSE: @next/env dotenv-expansion eats `$`-segments in
+ * .env.local values (a $-separated hash loaded back as "scrypt6384").
+ */
 export function hashPassword(password) {
   if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
     throw new Error(`the settings password needs at least ${MIN_PASSWORD_LENGTH} characters`);
   }
   const salt = randomBytes(16);
   const derived = scryptSync(password, salt, KEY_LEN, { ...SCRYPT, maxmem: 64 * 1024 * 1024 });
-  return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString("base64url")}$${derived.toString("base64url")}`;
+  return `scrypt:${SCRYPT.N}:${SCRYPT.r}:${SCRYPT.p}:${salt.toString("base64url")}:${derived.toString("base64url")}`;
 }
 
 /** Append or replace ONLY the FACE_SETTINGS_PASSWORD_HASH line; never touch others. */

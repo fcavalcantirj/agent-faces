@@ -3193,3 +3193,26 @@ UAT: [settings] Felipe: restart the launcher, set a password at the prompt, open
 visible) and a key (expect hosted STT to appear WITHOUT reload); check .env.local gained
 the lines; [settings-remote] on the Pi: pull+rebuild, set FACE_SETTINGS_ALLOW_REMOTE=1 +
 a password hash, edit a key from the tailscale HTTPS URL.
+
+2026-07-20: [bugfix] SETTINGS-PASSWORD FORMAT WAS EATEN BY DOTENV EXPANSION (Felipe's UAT
+caught it within minutes — "even answering ... No settings password is provisioned").
+ROOT-CAUSED EMPIRICALLY: @next/env runs dotenv-expansion on .env.local values, and the
+scrypt$N$r$p$salt$hash format's $-segments are treated as variable refs —
+`scrypt$16384$8$1$AbC$XyZ` loads back as "scrypt6384" (verified live against the repo's
+own @next/env; quoting does NOT protect $ — single AND double quotes still expand; only
+\$ escaping survives; unquoted # truncates as a comment). His hash line additionally never
+landed in .env.local (prompt run predated the fix chain — retest will confirm the flow).
+FIX: (1) hash format → COLON-separated scrypt:N:r:p:salt:hash in BOTH twins (env-admin.ts
++ settings-password.mjs; parity test updated; legacy $-hashes verify false = re-provision);
+(2) applyChangesToFile now SERIALIZES risky user values ($ → \$ inside double quotes; #
+and edge-space quoted) and parseEnvFile decodes for the persistence comparison; (3)
+validateChange rejects values containing double quotes or backslashes (unserializable
+cleanly — honest 400 instead of silent corruption); (4) NEW REGRESSION TEST round-trips
+the hash + $-value + #-value through the REAL @next/env loader (the test that would have
+caught this; gotcha pinned in-code: under NODE_ENV=test @next/env reads .env.test.local
+and SKIPS .env.local).
+Verify (all RUN, $? captured directly): env-admin suite 30/30 incl. the new round-trip;
+npm test EXIT=0 (675); npm run verify EXIT=0; npm run verify:linux EXIT=0; sync-template
+run.
+UAT: [settings] Felipe re-runs the launcher in a real terminal (the ! bridge is not a TTY
+— prompt skips by design there), sets the password, and the SERVER ENV unlock now works.

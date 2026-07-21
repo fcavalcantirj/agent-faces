@@ -94,12 +94,24 @@ describe('password hashing', () => {
   it('parses params from the stored string (not hardcoded)', () => {
     // A hash produced with different cost params must still verify.
     const weak = hashPassword(PW, { N: 4096, r: 8, p: 1 })
-    expect(weak).toMatch(/^scrypt\$4096\$8\$1\$/)
+    expect(weak).toMatch(/^scrypt:4096:8:1:/)
     expect(verifyPassword(PW, weak)).toBe(true)
   })
 
-  it('malformed or tampered hashes never verify and never throw', () => {
-    for (const bad of ['', 'plaintext', 'scrypt$abc', 'scrypt$16384$8$1$notb64$%%%', HASH.slice(0, -4) + 'AAAA']) {
+  it('the format contains NO dollar signs — @next/env dotenv-expansion eats them', () => {
+    // scrypt$16384$8$1$… loaded back as "scrypt6384" (verified live, 2026-07-20).
+    expect(HASH).not.toContain('$')
+  })
+
+  it('malformed, tampered, or legacy-$-format hashes never verify and never throw', () => {
+    for (const bad of [
+      '',
+      'plaintext',
+      'scrypt:abc',
+      'scrypt:16384:8:1:notb64:%%%',
+      'scrypt$16384$8$1$AbC123$XyZ789', // the broken legacy format — re-provision
+      HASH.slice(0, -4) + 'AAAA',
+    ]) {
       expect(verifyPassword(PW, bad)).toBe(false)
     }
   })
@@ -138,6 +150,51 @@ describe('applyChangesToFile', () => {
     const once = applyChangesToFile(FIXTURE, [{ name: 'GROQ_API_KEY', value: 'x' }])
     const twice = applyChangesToFile(once, [{ name: 'GROQ_API_KEY', value: 'x' }])
     expect(twice).toBe(once)
+  })
+
+  it('serializes $ and # values so @next/env loads them back verbatim', () => {
+    const out = applyChangesToFile('', [
+      { name: 'GROQ_API_KEY', value: 'gsk_with$dollar' },
+      { name: 'OPENAI_TRANSCRIBE_PROMPT', value: 'names: Fugu #1, R$ prices' },
+    ])
+    // Dollar escaped (expansion guard), risky values double-quoted.
+    expect(out).toContain('GROQ_API_KEY="gsk_with\\$dollar"')
+    expect(out).toContain('OPENAI_TRANSCRIBE_PROMPT="names: Fugu #1, R\\$ prices"')
+  })
+
+  it('REGRESSION: hash line + risky values round-trip through the REAL @next/env loader', async () => {
+    const { mkdtemp, writeFile, rm } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const dir = await mkdtemp(join(tmpdir(), 'env-roundtrip-'))
+    const KEYS = ['FACE_SETTINGS_PASSWORD_HASH', 'GROQ_API_KEY', 'OPENAI_TRANSCRIBE_PROMPT']
+    const before = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]))
+    try {
+      const fileText = applyChangesToFile(
+        `FACE_SETTINGS_PASSWORD_HASH=${HASH}\n`,
+        [
+          { name: 'GROQ_API_KEY', value: 'gsk_with$dollar' },
+          { name: 'OPENAI_TRANSCRIBE_PROMPT', value: 'has #hash and $dollar' },
+        ],
+      )
+      // Under vitest NODE_ENV==='test', so @next/env reads .env.test.local and
+      // SKIPS .env.local (dotenv convention) — same parser, test-mode filename.
+      await writeFile(join(dir, '.env.local'), fileText)
+      await writeFile(join(dir, '.env.test.local'), fileText)
+      for (const k of KEYS) delete process.env[k]
+      const { loadEnvConfig } = await import('@next/env')
+      loadEnvConfig(dir, true, { info: () => {}, error: () => {} }, true, () => {})
+      expect(process.env.FACE_SETTINGS_PASSWORD_HASH).toBe(HASH)
+      expect(verifyPassword(PW, process.env.FACE_SETTINGS_PASSWORD_HASH!)).toBe(true)
+      expect(process.env.GROQ_API_KEY).toBe('gsk_with$dollar')
+      expect(process.env.OPENAI_TRANSCRIBE_PROMPT).toBe('has #hash and $dollar')
+    } finally {
+      for (const k of KEYS) {
+        if (before[k] === undefined) delete process.env[k]
+        else process.env[k] = before[k]
+      }
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 })
 
@@ -294,6 +351,9 @@ describe('handlePost', () => {
       [{ changes: [{ name: 'AGENT_BRIDGE_URL', value: 'not a url' }] }, 'invalid_value'],
       [{ changes: [{ name: 'GROQ_API_KEY', value: 'a\nSELF_HOST=1' }] }, 'invalid_value'],
       [{ changes: [{ name: 'GROQ_API_KEY', value: 'a\rB=1' }] }, 'invalid_value'],
+      // Unserializable under dotenv quoting rules — honest refusal.
+      [{ changes: [{ name: 'GROQ_API_KEY', value: 'has"quote' }] }, 'invalid_value'],
+      [{ changes: [{ name: 'GROQ_API_KEY', value: 'back\\slash' }] }, 'invalid_value'],
     ]
     for (const [body, expected] of cases) {
       const res = await admin.handlePost(post(body))

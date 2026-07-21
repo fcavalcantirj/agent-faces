@@ -57,7 +57,13 @@ const MAX_P = 4
 
 const b64u = (buf: Buffer) => buf.toString('base64url')
 
-/** `scrypt$N$r$p$<salt b64url>$<hash b64url>` — params live in the string. */
+/**
+ * `scrypt:N:r:p:<salt b64url>:<hash b64url>` — params live in the string.
+ * Colon-separated ON PURPOSE: @next/env runs dotenv-expansion on `.env.local`
+ * values, and `$`-segments get eaten (a $-separated hash loaded back as
+ * "scrypt6384" — live finding, 2026-07-20). Twin implementation:
+ * skill/agent-face/scripts/settings-password.mjs (pinned by its parity test).
+ */
 export function hashPassword(
   password: string,
   params: { N: number; r: number; p: number } = SCRYPT_DEFAULTS,
@@ -67,13 +73,13 @@ export function hashPassword(
     ...params,
     maxmem: 64 * 1024 * 1024,
   })
-  return `scrypt$${params.N}$${params.r}$${params.p}$${b64u(salt)}$${b64u(derived)}`
+  return `scrypt:${params.N}:${params.r}:${params.p}:${b64u(salt)}:${b64u(derived)}`
 }
 
 /** Constant-time verify; malformed/tampered hashes return false, never throw. */
 export function verifyPassword(password: string, stored: string): boolean {
   try {
-    const parts = stored.split('$')
+    const parts = stored.split(':')
     if (parts.length !== 6 || parts[0] !== 'scrypt') return false
     const [N, r, p] = [Number(parts[1]), Number(parts[2]), Number(parts[3])]
     if (
@@ -151,12 +157,36 @@ export function settingsAvailability(
 
 const LINE_RE = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/
 
+/**
+ * Serialize a value for `.env.local` so @next/env loads it back VERBATIM:
+ * `$` must be escaped (dotenv-expansion eats it even inside quotes) and `#`
+ * or edge whitespace need quoting (unquoted `#` starts a comment). Values
+ * containing `"` or `\` are rejected upstream (unserializable cleanly).
+ */
+function serializeEnvValue(value: string): string {
+  const needsQuotes = /[#$]/.test(value) || /^\s|\s$/.test(value)
+  if (!needsQuotes) return value
+  return `"${value.replace(/\$/g, '\\$')}"`
+}
+
+/** Undo serializeEnvValue for comparison (strip quotes, unescape `\$`). */
+function decodeEnvValue(raw: string): string {
+  let v = raw
+  if (
+    (v.startsWith('"') && v.endsWith('"') && v.length >= 2) ||
+    (v.startsWith("'") && v.endsWith("'") && v.length >= 2)
+  ) {
+    v = v.slice(1, -1)
+  }
+  return v.replace(/\\\$/g, '$')
+}
+
 /** Parse KEY=value lines (comments/garbage ignored) — comparison only. */
 function parseEnvFile(text: string): Record<string, string> {
   const out: Record<string, string> = {}
   for (const line of text.split('\n')) {
     const m = LINE_RE.exec(line.trim())
-    if (m) out[m[1]] = m[2]
+    if (m) out[m[1]] = decodeEnvValue(m[2])
   }
   return out
 }
@@ -184,14 +214,15 @@ export function applyChangesToFile(fileText: string, changes: EnvChange[]): stri
       return false // drop removals and duplicate declarations
     })
     if (change.value !== null) {
+      const serialized = `${change.name}=${serializeEnvValue(change.value)}`
       if (replaced) {
-        lines = lines.map((line) => (matches(line) ? `${change.name}=${change.value}` : line))
+        lines = lines.map((line) => (matches(line) ? serialized : line))
       } else {
         // Append with trailing-newline discipline (file ends with one blank slot).
         if (lines.length > 0 && lines[lines.length - 1] === '') {
-          lines.splice(lines.length - 1, 0, `${change.name}=${change.value}`)
+          lines.splice(lines.length - 1, 0, serialized)
         } else {
-          lines.push(`${change.name}=${change.value}`)
+          lines.push(serialized)
         }
       }
     }
@@ -228,6 +259,13 @@ function validateChange(change: unknown): { ok: true; change: EnvChange } | { ok
   }
   if (CONTROL_RE.test(value)) {
     return { ok: false, code: 'invalid_value', message: `"${name}" value must be a single line.` }
+  }
+  if (value.includes('"') || value.includes('\\')) {
+    return {
+      ok: false,
+      code: 'invalid_value',
+      message: `"${name}" value cannot contain double quotes or backslashes (unserializable in .env.local).`,
+    }
   }
   if (value.length > MAX_VALUE_LEN) {
     return { ok: false, code: 'invalid_value', message: `"${name}" value is too long.` }

@@ -145,11 +145,11 @@ describe('GET /api/config', () => {
     const noPassword = await readConfig()
     expect(noPassword.body.settings).toEqual({ writable: false, reason: 'no_password' })
 
-    vi.stubEnv('FACE_SETTINGS_PASSWORD_HASH', 'scrypt$16384$8$1$AAAA$BBBB')
+    vi.stubEnv('FACE_SETTINGS_PASSWORD_HASH', 'scrypt:16384:8:1:AAAA:BBBB')
     vi.stubEnv('VERCEL', '1')
     const onVercel = await readConfig()
     expect(onVercel.body.settings).toEqual({ writable: false, reason: 'readonly_platform' })
     // The hash itself must never appear in the payload.
-    expect(onVercel.text).not.toContain('scrypt$')
+    expect(onVercel.text).not.toContain('scrypt:')
   })
 })

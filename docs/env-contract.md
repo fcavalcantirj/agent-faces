@@ -107,7 +107,7 @@ browser, guarded by a master password and a fixed allowlist
 
 | Variable | Meaning |
 |---|---|
-| `FACE_SETTINGS_PASSWORD_HASH` | scrypt hash (`scrypt$N$r$p$salt$hash`) gating `/api/env`. Generate via the launcher's first-run prompt or `node skill/agent-face/scripts/settings-password.mjs`. Absent ⇒ the editor (and the route) do not exist. Never editable through the GUI itself. |
+| `FACE_SETTINGS_PASSWORD_HASH` | scrypt hash (`scrypt:N:r:p:salt:hash` — colon-separated; `$` would be eaten by dotenv expansion) gating `/api/env`. Generate via the launcher's first-run prompt or `node skill/agent-face/scripts/settings-password.mjs`. Absent ⇒ the editor (and the route) do not exist. Never editable through the GUI itself. |
 | `FACE_SETTINGS_ALLOW_REMOTE` | `1` allows settings writes from remote **HTTPS** origins (e.g. the tailscale-serve URL). Plain-HTTP remote writes are always refused; localhost always works. |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code subscription token (`claude setup-token`) for the Mode B `claude-code` bridge on headless machines. The launcher forwards it from `.env.local` to the bridge child; applies after a launcher restart. |
 
