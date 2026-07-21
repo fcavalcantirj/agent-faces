@@ -3302,3 +3302,13 @@ Verify (all RUN, $? captured directly): npm test EXIT=0 (682); npm run verify EX
 npm run verify:linux EXIT=0; sync-template run.
 UAT: [settings] hover glow visible on all SERVER ENV buttons; EDIT on a set secret shows
 the replace-hint placeholder instead of a bare empty box.
+
+2026-07-21: [polish] POINTER CURSOR on all SERVER ENV buttons (Felipe: hover glow good,
+but the mouse cursor stayed the default arrow on CREATE PASSWORD/UNLOCK — Tailwind v4
+preflight gives buttons cursor:default, so every interactive control needs an explicit
+cursor-pointer; CREATE keeps disabled:cursor-not-allowed). STANDING UI RULE for this
+app, learned across this UAT loop: every clickable control needs BOTH a visible hover
+state AND a pointer cursor, and every disabled control must SAY why it is disabled —
+anything less reads as broken.
+Verify: npm test EXIT=0 (682); npm run verify EXIT=0; npm run verify:linux EXIT=0;
+sync-template run.

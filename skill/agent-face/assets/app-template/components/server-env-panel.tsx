@@ -251,7 +251,7 @@ export function ServerEnvPanel({ onBack, onSaved, fetchImpl }: ServerEnvPanelPro
                     setDraftValue(!spec.secret && state?.value ? state.value : '')
                     setRowMsg(null)
                   }}
-                  className="rounded-sm border border-border/60 px-2 py-0.5 text-[10px] tracking-wider text-muted-foreground transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent"
+                  className="cursor-pointer rounded-sm border border-border/60 px-2 py-0.5 text-[10px] tracking-wider text-muted-foreground transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent"
                 >
                   {set ? 'EDIT' : 'SET'}
                 </button>
@@ -260,7 +260,7 @@ export function ServerEnvPanel({ onBack, onSaved, fetchImpl }: ServerEnvPanelPro
                     type="button"
                     disabled={busy}
                     onClick={() => void save(spec.name, null)}
-                    className="rounded-sm border border-border/60 px-2 py-0.5 text-[10px] tracking-wider text-muted-foreground transition-colors hover:border-red-400 hover:bg-red-950/40 hover:text-red-400"
+                    className="cursor-pointer rounded-sm border border-border/60 px-2 py-0.5 text-[10px] tracking-wider text-muted-foreground transition-colors hover:border-red-400 hover:bg-red-950/40 hover:text-red-400"
                   >
                     CLEAR
                   </button>
@@ -312,7 +312,7 @@ export function ServerEnvPanel({ onBack, onSaved, fetchImpl }: ServerEnvPanelPro
             <button
               type="submit"
               disabled={busy || !draftValue}
-              className="rounded-sm border border-border/60 px-2 py-1 text-[10px] tracking-wider transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent disabled:opacity-40"
+              className="cursor-pointer rounded-sm border border-border/60 px-2 py-1 text-[10px] tracking-wider transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent disabled:opacity-40"
             >
               SAVE
             </button>
@@ -356,7 +356,7 @@ export function ServerEnvPanel({ onBack, onSaved, fetchImpl }: ServerEnvPanelPro
         <button
           type="button"
           onClick={onBack}
-          className="rounded-sm border border-border/60 px-2 py-1 text-xs tracking-wider text-muted-foreground transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent"
+          className="cursor-pointer rounded-sm border border-border/60 px-2 py-1 text-xs tracking-wider text-muted-foreground transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent"
         >
           ← SETTINGS
         </button>
@@ -409,7 +409,7 @@ export function ServerEnvPanel({ onBack, onSaved, fetchImpl }: ServerEnvPanelPro
           <button
             type="submit"
             disabled={draftPassword.length < 12 || draftPassword !== draftConfirm}
-            className="self-start rounded-sm border border-border/60 px-3 py-2 text-xs tracking-wider transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+            className="cursor-pointer self-start rounded-sm border border-border/60 px-3 py-2 text-xs tracking-wider transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
           >
             CREATE PASSWORD
           </button>
@@ -436,7 +436,7 @@ export function ServerEnvPanel({ onBack, onSaved, fetchImpl }: ServerEnvPanelPro
             <button
               type="submit"
               disabled={!draftPassword}
-              className="rounded-sm border border-border/60 px-3 py-2 text-xs tracking-wider transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent disabled:opacity-40"
+              className="cursor-pointer rounded-sm border border-border/60 px-3 py-2 text-xs tracking-wider transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent disabled:opacity-40"
             >
               UNLOCK
             </button>
@@ -461,7 +461,7 @@ export function ServerEnvPanel({ onBack, onSaved, fetchImpl }: ServerEnvPanelPro
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="self-start rounded-sm border border-border/60 px-2 py-1 text-[10px] tracking-widest text-muted-foreground transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent"
+          className="cursor-pointer self-start rounded-sm border border-border/60 px-2 py-1 text-[10px] tracking-widest text-muted-foreground transition-colors hover:border-accent hover:bg-accent/10 hover:text-accent"
         >
           {showAll ? 'HIDE' : `SHOW ALL (${rows.more.length} more)`}
         </button>
