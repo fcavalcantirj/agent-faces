@@ -3428,3 +3428,40 @@ unknown override key) → GREEN; client 18/18 + tests/chat.stream + client-bound
 gates); npm run verify:linux EXIT=0; sync-template run (1 file updated).
 UAT: [latency] felt check — the face starts speaking noticeably sooner on short first
 sentences ("On it." before tool work); covered by the Task-4 measurement below.
+
+2026-07-21: [analysis] POST-OPTIMIZATION MEASUREMENT — all three approved wins landed,
+re-measured against the 2026-07-20 baseline on the same rig (same instruments:
+measure-bridge.mjs curl cells + measure-browser.mjs headed-Chromium cells +
+[bridge-timing]/[latency] lines; all [REAL]). HEADLINES:
+• PTT VOICE TURN (speak-stop→first-word, the baseline's headline): 4.6s → 3.15s
+  (-1.4s, -31%) — INSIDE the projected 2.8-3.2s band. Hands-free adds the VAD tail:
+  1400ms then, 700ms now (snappy default) → ≈6.0s → ≈3.85s projected (-36%), inside
+  the 3.5-3.9s band.
+• TYPED TURN (submit→first audible word): 1.64s / 2.29s on warm turns.
+• THE A/B PROOF (CLAUDE_BRIDGE_WARM lever, same day, same rig): warm=0 resumed turns
+  each pay initMs 963-1109ms (the per-turn spawn — matching the baseline's ~1.1s
+  exactly); warm=1 turns pay NO initMs at all. Warm firstDelta median ≈2.5s (n=6:
+  1710/1899/2294/2692/3154/3884) vs baseline per-turn ≈3.2s (1.1 spawn + 2.1 TTFT
+  medians). Felipe's live unprompted verdict mid-session: "it did improved A LOT.
+  its faster."
+• CONTEXT CONTINUITY THROUGH THE WARM SESSION: measured turn "what did I first ask
+  you?" answered correctly on a warm turn (and warm-3 named "Fugu" as its animal —
+  the persona rides along).
+• FIRST-SENTENCE FLUSH visible live: firstSentenceMs-ttftMs gaps of 1-472ms (sync
+  split when whitespace-terminated; fast 80ms tier when stranded).
+• 13.4s TTFT TAIL: NOT observed in today's 8 warm cells (max 4.0s) — consistent with
+  the session-file-reload hypothesis but n is small; keep watching [bridge-timing].
+• STT TODAY (hosted whisper-1): upstream 828ms warm / 2234ms cold. RECOMMENDATION TO
+  FELIPE (win #4, zero code — verified Groq-first routing already shipped +
+  unit-tested): add GROQ_API_KEY in Settings → SERVER ENV; whisper-large-v3-turbo
+  should roughly halve that leg, live on the next request.
+MEASUREMENT NOTES: each measure run starts a FRESH conversation (no assistant turns)
+which by design closes any open warm session — Felipe's next real turn rebuilds via
+resume (one respawn, context intact). Rig left RUNNING on :3100, warm ON, all wins
+live. Remaining watch items for lived use: barge-in costs one respawn on the next
+turn (approved trade); flip HANDS-FREE PAUSE to Relaxed if snappy clips real pauses.
+Gates: no source changed since 8bdb691 (all gates EXIT=0 there); npm test re-run
+post-measurement EXIT=0.
+UAT: [latency] Felipe's "does it FEEL fast" verdict + optionally paste
+copy(__agentFaceLatency.dump()) lines from real lived turns; [tag] Felipe said "we
+can even tag probably" — tagging awaits his explicit word per house rules.
