@@ -3470,3 +3470,10 @@ can even tag probably" — tagging awaits his explicit word per house rules.
 it", name from his own words: "slightly faster version, something we remember by" — the
 understatement is the joke: -31% PTT, -36% hands-free). Tag annotates the three wins +
 the CLAUDE_BRIDGE_WARM=0 rollback lever. No source changed since 6805df2.
+
+2026-07-21: [release] v0.4.0 RETAGGED "A Slightly Faster Face" (same commit 6805df2 —
+message only). Felipe retired the "Fugu" persona name minutes after the original tag
+("ditch fugu. agent faces is the name"); the face is Agent Faces, no pet name — the
+name lived only in the shared project memory (now updated; the face's own brain reads
+the same memory, so the next fresh conversation drops it). reference/fugu-face/ stays:
+that's the vendored renderer's directory, provenance not persona.
