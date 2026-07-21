@@ -3465,3 +3465,8 @@ post-measurement EXIT=0.
 UAT: [latency] Felipe's "does it FEEL fast" verdict + optionally paste
 copy(__agentFaceLatency.dump()) lines from real lived turns; [tag] Felipe said "we
 can even tag probably" — tagging awaits his explicit word per house rules.
+
+2026-07-21: [release] TAGGED v0.4.0 — "A Slightly Faster Fugu" (Felipe's explicit "tag
+it", name from his own words: "slightly faster version, something we remember by" — the
+understatement is the joke: -31% PTT, -36% hands-free). Tag annotates the three wins +
+the CLAUDE_BRIDGE_WARM=0 rollback lever. No source changed since 6805df2.
