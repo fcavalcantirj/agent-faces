@@ -190,6 +190,10 @@ export class VadController {
   private vad: MicVADLike | null = null;
   private loadPromise: Promise<MicVADLike> | null = null;
   private disposed = false;
+  /** Runtime redemption retune (the HANDS-FREE PAUSE knob) — wins over options. */
+  private redemptionOverride: number | null = null;
+  /** Bumped on retune: an in-flight model load with a stale config must not go live. */
+  private buildSeq = 0;
   /** Is the FACE currently speaking? Suppresses the mic entirely (half-duplex). */
   private faceSpeaking = false;
   /** Was the mic listening when suppression began (so we know to re-arm)? */
@@ -276,7 +280,7 @@ export class VadController {
         this.options.negativeSpeechThreshold ??
         DEFAULT_NEGATIVE_SPEECH_THRESHOLD,
       minSpeechMs: this.options.minSpeechMs ?? DEFAULT_MIN_SPEECH_MS,
-      redemptionMs: this.options.redemptionMs ?? DEFAULT_REDEMPTION_MS,
+      redemptionMs: this.effectiveRedemptionMs(),
       preSpeechPadMs: this.options.preSpeechPadMs ?? DEFAULT_PRE_SPEECH_PAD_MS,
       model: this.options.model ?? DEFAULT_VAD_MODEL,
       baseAssetPath: this.options.baseAssetPath ?? DEFAULT_VAD_ASSET_PATH,
@@ -324,24 +328,67 @@ export class VadController {
     this.callbacks.onMisfire?.();
   }
 
+  private effectiveRedemptionMs(): number {
+    return this.redemptionOverride ?? this.options.redemptionMs ?? DEFAULT_REDEMPTION_MS;
+  }
+
+  /**
+   * Retune the endpointing tail. The engine bakes redemption in at build time,
+   * so this rebuilds the underlying MicVAD: immediately when the mic is open
+   * (an in-flight utterance is dropped — the user is in the settings drawer),
+   * lazily on the next start() otherwise. A retune while the model is still
+   * LOADING lets the load finish, discards the stale instance, and builds the
+   * current config (the generation guard in ensureLoaded).
+   */
+  setRedemptionMs(ms: number): void {
+    if (this.disposed) return;
+    if (ms === this.effectiveRedemptionMs()) return;
+    this.redemptionOverride = ms;
+    this.buildSeq += 1; // any in-flight load now bakes a stale config
+    const old = this.vad;
+    if (!old) return; // nothing live: a pending load self-corrects, start() builds fresh
+    const wasActive = this.active;
+    this.vad = null;
+    this.loadPromise = null;
+    void Promise.resolve(old.destroy()).catch(() => {});
+    this.setState("idle");
+    if (wasActive) {
+      void this.start().catch((err) => this.callbacks.onError?.(err));
+    }
+  }
+
   private ensureLoaded(): Promise<MicVADLike> {
     if (this.vad) return Promise.resolve(this.vad);
     if (this.loadPromise) return this.loadPromise;
     this.setState("loading");
     const create = this.deps.createMicVAD ?? defaultCreateMicVAD;
-    this.loadPromise = create(this.buildConfig())
-      .then((vad) => {
+    const attempt = (): Promise<MicVADLike> => {
+      const seq = this.buildSeq;
+      return create(this.buildConfig()).then((vad) => {
+        if (this.disposed) {
+          void Promise.resolve(vad.destroy()).catch(() => {});
+          throw new Error("VAD was destroyed while its model loaded.");
+        }
+        if (seq !== this.buildSeq) {
+          // Retuned while loading: this instance bakes a stale redemption.
+          void Promise.resolve(vad.destroy()).catch(() => {});
+          return attempt();
+        }
         this.vad = vad;
         return vad;
-      })
+      });
+    };
+    const load = attempt()
       .catch((err) => {
         this.setState("error");
         throw err;
       })
       .finally(() => {
-        this.loadPromise = null;
+        // A retune may have already claimed the slot for a newer chain.
+        if (this.loadPromise === load) this.loadPromise = null;
       });
-    return this.loadPromise;
+    this.loadPromise = load;
+    return load;
   }
 
   /**

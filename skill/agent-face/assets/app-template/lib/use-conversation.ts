@@ -17,6 +17,7 @@ import {
   type ConversationTurn,
   type InputMode,
   type SttLanguage,
+  type VadRedemption,
 } from '@/lib/conversation'
 import type { SttMode } from '@/lib/stt'
 import type { TtsEngine } from '@/lib/tts'
@@ -56,6 +57,8 @@ export interface UseConversation {
   setTtsEngine(engine: TtsEngine): void
   /** Choose the face renderer skin (eidolon | talkinghead). */
   setFaceSkin(skin: FaceSkinId): void
+  /** Choose the hands-free pause preset (snappy | relaxed). */
+  setVadRedemption(value: VadRedemption): void
   /** Set the persona / system prompt. */
   setSystem(system: string): void
   /** Clear the transcript (keeps provider/model + persona). */
@@ -117,6 +120,10 @@ export function useConversation(
     (skin: FaceSkinId) => store.setFaceSkin(skin),
     [store],
   )
+  const setVadRedemption = useCallback(
+    (value: VadRedemption) => store.setVadRedemption(value),
+    [store],
+  )
   const setSystem = useCallback((system: string) => store.setSystem(system), [store])
   const reset = useCallback(() => store.reset(), [store])
   const toMessages = useCallback(() => store.toMessages(), [store])
@@ -135,6 +142,7 @@ export function useConversation(
       setSttLanguage,
       setTtsEngine,
       setFaceSkin,
+      setVadRedemption,
       setSystem,
       reset,
       toMessages,
@@ -152,6 +160,7 @@ export function useConversation(
       setSttLanguage,
       setTtsEngine,
       setFaceSkin,
+      setVadRedemption,
       setSystem,
       reset,
       toMessages,

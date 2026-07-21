@@ -131,6 +131,7 @@ describe('conversation store', () => {
       sttLanguage: 'en',
       ttsEngine: 'web-speech',
       faceSkin: 'eidolon',
+      vadRedemption: 'snappy',
     })
   })
 
@@ -167,6 +168,27 @@ describe('conversation store', () => {
     }
   })
 
+  it('hands-free pause (VAD redemption): defaults to SNAPPY, persists, heals junk and old blobs', () => {
+    const store = createConversationStore({ storage })
+    expect(store.getState().settings.vadRedemption).toBe('snappy')
+    store.setVadRedemption('relaxed')
+    expect(store.getState().settings.vadRedemption).toBe('relaxed')
+
+    const reloaded = createConversationStore({ storage })
+    expect(reloaded.getState().settings.vadRedemption).toBe('relaxed')
+
+    // Junk and pre-knob blobs (field missing entirely) heal to the default —
+    // the knob shipped after v1 blobs existed, WITHOUT a version bump (a bump
+    // would discard the whole blob, transcript included).
+    for (const legacy of ['instant', 1400, undefined]) {
+      const blob = JSON.parse(storage.dump[CONVERSATION_STORAGE_KEY])
+      if (legacy === undefined) delete blob.settings.vadRedemption
+      else blob.settings.vadRedemption = legacy
+      storage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(blob))
+      expect(createConversationStore({ storage }).getState().settings.vadRedemption).toBe('snappy')
+    }
+  })
+
   it('persists to localStorage under a versioned key and restores on reload', () => {
     const store = createConversationStore({ storage, idFactory: () => 'x' })
     store.setProvider('anthropic')
@@ -189,6 +211,7 @@ describe('conversation store', () => {
       sttLanguage: 'en',
       ttsEngine: 'web-speech',
       faceSkin: 'eidolon',
+      vadRedemption: 'snappy',
     })
     expect(reloaded.toMessages()).toEqual([
       { role: 'user', content: 'remember me' },

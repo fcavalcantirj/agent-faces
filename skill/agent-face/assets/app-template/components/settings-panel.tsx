@@ -19,7 +19,7 @@ import type { ModelInfo } from '@/lib/providers'
 import type { SttMode } from '@/lib/stt'
 import type { TtsEngine } from '@/lib/tts'
 import type { FaceSkinId } from '@/lib/face/skin'
-import type { InputMode, SttLanguage } from '@/lib/conversation'
+import type { InputMode, SttLanguage, VadRedemption } from '@/lib/conversation'
 import { useConversation, type UseConversation } from '@/lib/use-conversation'
 import { ServerEnvPanel } from '@/components/server-env-panel'
 import {
@@ -280,6 +280,18 @@ export function SettingsPanel({
           ]}
         />
 
+        {/* Hands-free endpointing ------------------------------------------- */}
+        <Segmented<VadRedemption>
+          title="HANDS-FREE PAUSE"
+          value={settings.vadRedemption}
+          onChange={(v) => conv.setVadRedemption(v)}
+          options={[
+            { value: 'snappy', label: 'Snappy (0.7s)' },
+            { value: 'relaxed', label: 'Relaxed (1.4s)' },
+          ]}
+          caption="Silence before the face treats your turn as done. Snappy answers sooner; Relaxed tolerates longer mid-sentence pauses. Hands-free only — applies immediately."
+        />
+
         {/* STT mode --------------------------------------------------------- */}
         <RadioGroup<SttMode>
           title="SPEECH-TO-TEXT"
@@ -407,11 +419,13 @@ function Segmented<T extends string>({
   value,
   onChange,
   options,
+  caption,
 }: {
   title: string
   value: T
   onChange: (value: T) => void
   options: { value: T; label: string }[]
+  caption?: string
 }) {
   return (
     <section className="flex flex-col gap-2">
@@ -425,10 +439,10 @@ function Segmented<T extends string>({
               type="button"
               onClick={() => onChange(o.value)}
               aria-pressed={active}
-              className={`flex-1 rounded-sm border px-2 py-1.5 text-xs tracking-wider transition-colors ${
+              className={`flex-1 cursor-pointer rounded-sm border px-2 py-1.5 text-xs tracking-wider transition-colors ${
                 active
                   ? 'border-current bg-card text-foreground'
-                  : 'border-border/40 text-muted-foreground hover:text-foreground'
+                  : 'border-border/40 text-muted-foreground hover:border-accent hover:bg-accent/10 hover:text-accent'
               }`}
             >
               {o.label}
@@ -436,6 +450,9 @@ function Segmented<T extends string>({
           )
         })}
       </div>
+      {caption ? (
+        <p className="text-[10px] leading-relaxed text-muted-foreground/60">{caption}</p>
+      ) : null}
     </section>
   )
 }

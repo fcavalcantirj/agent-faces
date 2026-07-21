@@ -76,6 +76,26 @@ export function sttLanguageHint(language: SttLanguage): string | undefined {
   return language === 'auto' ? undefined : language
 }
 
+/**
+ * HANDS-FREE PAUSE: how much silence ends a hands-free turn (the VAD
+ * redemption tail). Stored as a named preset, not a number, so retuning a
+ * preset upgrades every persisted user without a storage migration. `relaxed`
+ * mirrors the VAD's own DEFAULT_REDEMPTION_MS (a lockstep test enforces it);
+ * `snappy` is the measured latency win (-0.7s to first word, 2026-07-20) and
+ * the shipped default — the knob exists so it stays reversible.
+ */
+export type VadRedemption = 'snappy' | 'relaxed'
+export const VAD_REDEMPTION_MS: Record<VadRedemption, number> = {
+  snappy: 700,
+  relaxed: 1400,
+}
+export const DEFAULT_VAD_REDEMPTION: VadRedemption = 'snappy'
+
+/** The milliseconds the detector should actually run for a preset. */
+export function vadRedemptionMs(value: VadRedemption): number {
+  return VAD_REDEMPTION_MS[value]
+}
+
 /** Which brain is currently selected. `null` = not chosen yet. */
 export interface ConversationSettings {
   provider: string | null
@@ -90,6 +110,8 @@ export interface ConversationSettings {
   ttsEngine: TtsEngine
   /** Which face renderer drives the visuals. */
   faceSkin: FaceSkinId
+  /** Hands-free endpointing tail: silence before a turn is considered done. */
+  vadRedemption: VadRedemption
 }
 
 /** The full, immutable store state. */
@@ -170,6 +192,8 @@ export interface ConversationStore {
   setTtsEngine(engine: TtsEngine): void
   /** Set the face renderer skin (eidolon | talkinghead). */
   setFaceSkin(skin: FaceSkinId): void
+  /** Set the hands-free pause preset (snappy | relaxed). */
+  setVadRedemption(value: VadRedemption): void
   /** Set any subset of settings together. */
   setSettings(settings: Partial<ConversationSettings>): void
   /** Clear the transcript (keeps provider/model + persona) and persist the clear. */
@@ -205,6 +229,7 @@ function emptySettings(): ConversationSettings {
     sttLanguage: DEFAULT_STT_LANGUAGE,
     ttsEngine: DEFAULT_TTS_ENGINE,
     faceSkin: DEFAULT_FACE_SKIN,
+    vadRedemption: DEFAULT_VAD_REDEMPTION,
   }
 }
 
@@ -234,6 +259,13 @@ function normalizeTtsEngine(value: unknown): TtsEngine {
   return value === 'web-speech' || value === 'openai' || value === 'kokoro'
     ? value
     : DEFAULT_TTS_ENGINE
+}
+
+/** Coerce a persisted value to a valid VadRedemption (defaulting missing/garbage). */
+function normalizeVadRedemption(value: unknown): VadRedemption {
+  return value === 'snappy' || value === 'relaxed'
+    ? value
+    : DEFAULT_VAD_REDEMPTION
 }
 
 /** Coerce a persisted value to a valid FaceSkinId (defaulting missing/garbage). */
@@ -283,6 +315,7 @@ function loadPersisted(
     sttLanguage: normalizeSttLanguage(blob.settings?.sttLanguage),
     ttsEngine: normalizeTtsEngine(blob.settings?.ttsEngine),
     faceSkin: normalizeFaceSkin(blob.settings?.faceSkin),
+    vadRedemption: normalizeVadRedemption(blob.settings?.vadRedemption),
   }
   return {
     // Restored turns are never mid-stream.
@@ -456,6 +489,11 @@ export function createConversationStore(
     setFaceSkin(skin) {
       if (skin === state.settings.faceSkin) return
       commit(state.turns, { settings: { ...state.settings, faceSkin: skin } })
+    },
+
+    setVadRedemption(value) {
+      if (value === state.settings.vadRedemption) return
+      commit(state.turns, { settings: { ...state.settings, vadRedemption: value } })
     },
 
     setSettings(partial) {

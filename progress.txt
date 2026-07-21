@@ -3360,3 +3360,49 @@ verify EXIT=0 (6 gates); npm run verify:linux EXIT=0. bridge/ is not templated �
 sync-template needed.
 UAT: [latency] deferred to Task 4: live warm:true observed in [bridge-timing] on the
 real app path + deltas vs the 2026-07-20 baseline.
+
+2026-07-21: [fullstack] HANDS-FREE PAUSE — VAD REDEMPTION AS A RUNTIME SETTING (latency
+win #2): hands-free turns now end 0.7s sooner BY DEFAULT, and the knob is reversible in
+the settings drawer. NEW: ConversationSettings.vadRedemption: 'snappy' (700ms, the new
+default) | 'relaxed' (1400ms, the historical constant) — a named preset, not a number,
+so retuning a preset later upgrades every persisted user without a migration; pre-knob
+v1 blobs and junk values heal via normalizer (NO storage-version bump — a bump discards
+the whole blob, transcript included). PLUMBING: lib/conversation.ts (type + VAD_
+REDEMPTION_MS map + normalizer + setter), lib/use-conversation.ts (exposed),
+lib/use-orchestrator.ts — ONE source of truth (vadTail()) feeds BOTH createVad options
+AND the orchestrator's vadTailMs, which became a LIVE GETTER dep (orchestrator already
+reads deps.vadTailMs per turn at begin(); zero orchestrator changes — pinned by a new
+two-turn 1400→700 contract test) so ttfwMs and the HUD "VAD x.x" readout can never lie
+about the tail the detector actually ran. LIVE RETUNE: new VadController.
+setRedemptionMs() — the engine bakes redemption at build time, so it rebuilds the
+MicVAD: immediately when listening (in-flight utterance dropped — the user is in the
+drawer), lazily on next start() otherwise; a retune DURING model load is handled by a
+buildSeq generation guard in ensureLoaded (the stale instance is destroyed, the load
+chain rebuilds with the current config — the guarded-finally keeps a newer chain's
+loadPromise from being clobbered). RED first: the guard test caught a real miss (the
+early-return skipped the seq bump when nothing was live yet). UI: new Segmented section
+HANDS-FREE PAUSE between INPUT and SPEECH-TO-TEXT — Snappy (0.7s) / Relaxed (1.4s) +
+caption ("Silence before the face treats your turn as done… applies immediately");
+Segmented gained an optional caption prop AND the standing-rule compliance fix it
+predated (cursor-pointer + border-accent/bg-accent/10/text-accent hover) — retro-fixes
+INPUT and VOICE LANGUAGE too. RadioGroup's missing accent hover = flagged follow-up,
+NOT touched (unasked-change protocol). BROWSER-DRIVEN before claiming done (house
+rule), all observed live on :3100 headless Chromium: section renders in order ✓ caption
+✓ Snappy preselected ✓ cursor:pointer ✓ hover color → accent cyan ✓ toggle → reload →
+persisted ✓ restored to default ✓ localStorage carries the field ✓. MEANWHILE, FELIPE'S
+LIVE UAT (unprompted): "it did improved A LOT. its faster" — his real turns in the
+stack log show the Task-1 warm bridge engaging on the real app path: warm:false
+initMs=5173 firstDelta=8450 (cold open + dev compile), then warm:true firstDelta=2294,
+warm:true firstDelta=1899 — WATCH ITEM #2 CONFIRMED LIVE (warm:true on the app path;
+no initMs on warm turns, as designed). Session note: mid-task the rig was killed for a
+build gate while Felipe was speaking to the face ("Could not reach the hosted
+transcription service") — own goal, owned in-session; gates that build now bounce the
+rig in one announced fast window with immediate restart. A cd left in the shell also
+sent one gate run to the scratchpad (npm ENOENT ×3, exit 254) — not a real failure;
+re-run from the repo.
+Verify (all RUN, $? captured directly): RED 8 (conversation 3 + vad 5) → GREEN; vad
+23/23, conversation 16/16, orchestrator getter pin green-on-arrival (pins the live-dep
+contract); npm run typecheck EXIT=0; npm test EXIT=0 (701); npm run verify EXIT=0
+(6 gates); npm run verify:linux EXIT=0; sync-template run (86 files, 5 updated).
+UAT: [settings] flip HANDS-FREE PAUSE to Relaxed and confirm the face waits longer
+before answering hands-free; HUD readout shows VAD 0.7 on Snappy.

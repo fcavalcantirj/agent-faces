@@ -406,6 +406,37 @@ describe('conversation orchestrator', () => {
     expect(orch.getStatus().latency).toMatchObject({ ttfwMs: 8700 + 1400 })
   })
 
+  it('reads vadTailMs LIVE per turn — a runtime redemption change keeps TTFW honest', async () => {
+    // The settings knob (HANDS-FREE PAUSE) can retune the VAD redemption
+    // between turns; the deps object exposes a GETTER so begin() sees the
+    // value the detector is actually running, not a construction-time copy.
+    const chats = [makeFakeChat(), makeFakeChat()]
+    let turn = -1
+    let tail = 1400
+    const orch = createOrchestrator({
+      conversation,
+      emotion,
+      tts: makeFakeTts().tts,
+      transcribe: async () => ({ text: 'hi', engine: 'browser' as const }),
+      runChat: (opts, cbs) => chats[++turn].runChat(opts, cbs),
+      get vadTailMs() {
+        return tail
+      },
+    })
+
+    for (const [i, expected] of [1400, 700].entries()) {
+      if (i === 1) tail = 700 // the knob flipped between turns
+      await orch.submitAudio(new Blob(['x']), { source: 'vad' })
+      chats[i].firstToken()
+      chats[i].sentence('Ok.')
+      orch.handleSpeechStart()
+      orch.handleFirstAudible()
+      chats[i].finish({ text: 'Ok.' })
+      orch.handleSpeechEnd()
+      expect(orch.getTurnLog()[i].vadTailMs).toBe(expected)
+    }
+  })
+
   it('a typed turn records no stt/vad fields and ttfw equals firstAudible', () => {
     const chat = makeFakeChat()
     let t = 0

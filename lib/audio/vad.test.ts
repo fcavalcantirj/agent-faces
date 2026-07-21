@@ -4,6 +4,7 @@ import {
   createVad,
   DEFAULT_MIN_SPEECH_MS,
   DEFAULT_POSITIVE_SPEECH_THRESHOLD,
+  DEFAULT_REDEMPTION_MS,
   DEFAULT_VAD_ASSET_PATH,
   DEFAULT_VAD_MODEL,
   VAD_SAMPLE_RATE,
@@ -11,6 +12,7 @@ import {
   type MicVADLike,
   type VadSegment,
 } from "@/lib/audio/vad";
+import { VAD_REDEMPTION_MS } from "@/lib/conversation";
 
 // --- Fakes -----------------------------------------------------------------
 // jsdom has no MicVAD / onnxruntime, so we inject the whole library seam. The
@@ -314,5 +316,93 @@ describe("VadController", () => {
     getVad().config.onSpeechStart();
     await getVad().config.onSpeechEnd(new Float32Array(160));
     expect(states).toEqual(["loading", "listening", "speech", "listening"]);
+  });
+});
+
+describe("VadController.setRedemptionMs (the HANDS-FREE PAUSE knob)", () => {
+  it("honors a redemptionMs override at build time", async () => {
+    const { controller, getVad } = makeController({ options: { redemptionMs: 700 } });
+    await controller.start();
+    expect(getVad().config.redemptionMs).toBe(700);
+  });
+
+  it("keeps the settings-store ms map in lockstep with the VAD default", () => {
+    // 'relaxed' IS the historical default; if DEFAULT_REDEMPTION_MS is ever
+    // retuned, the settings map must move with it (or this fails the build).
+    expect(VAD_REDEMPTION_MS.relaxed).toBe(DEFAULT_REDEMPTION_MS);
+    expect(VAD_REDEMPTION_MS.snappy).toBe(700);
+  });
+
+  it("retunes LIVE while listening: rebuilds the engine and keeps listening", async () => {
+    const built: FakeMicVAD[] = [];
+    const create = vi.fn(async (config: MicVADConfig) => {
+      const v = new FakeMicVAD(config);
+      built.push(v);
+      return v;
+    });
+    const controller = new VadController({}, { redemptionMs: 1400 }, {
+      createMicVAD: create,
+      resumeAudio: async () => undefined,
+    });
+    await controller.start();
+    controller.setRedemptionMs(700);
+    await vi.waitFor(() => expect(controller.getState()).toBe("listening"));
+    expect(built).toHaveLength(2);
+    expect(built[0].destroyCalls).toBe(1);
+    expect(built[1].config.redemptionMs).toBe(700);
+    expect(built[1].listening).toBe(true);
+  });
+
+  it("applies lazily when nothing is built yet: the next start() uses the new value", async () => {
+    const create = vi.fn(async (config: MicVADConfig) => new FakeMicVAD(config));
+    const controller = new VadController({}, {}, {
+      createMicVAD: create,
+      resumeAudio: async () => undefined,
+    });
+    controller.setRedemptionMs(700);
+    expect(create).not.toHaveBeenCalled();
+    await controller.start();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0].redemptionMs).toBe(700);
+  });
+
+  it("the same value is a no-op (no rebuild)", async () => {
+    const create = vi.fn(async (config: MicVADConfig) => new FakeMicVAD(config));
+    const controller = new VadController({}, { redemptionMs: 700 }, {
+      createMicVAD: create,
+      resumeAudio: async () => undefined,
+    });
+    await controller.start();
+    controller.setRedemptionMs(700);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("a retune DURING model load discards the stale instance (generation guard)", async () => {
+    const built: FakeMicVAD[] = [];
+    const gate: { release: (() => void) | null } = { release: null };
+    const create = vi.fn(async (config: MicVADConfig) => {
+      const v = new FakeMicVAD(config);
+      built.push(v);
+      if (built.length === 1)
+        await new Promise<void>((resolve) => {
+          gate.release = resolve;
+        });
+      return v;
+    });
+    const controller = new VadController({}, {}, {
+      createMicVAD: create,
+      resumeAudio: async () => undefined,
+    });
+    const starting = controller.start();
+    await vi.waitFor(() => expect(gate.release).not.toBeNull());
+    controller.setRedemptionMs(700); // reconfigured while the model loads
+    gate.release!();
+    await starting;
+    expect(controller.getState()).toBe("listening");
+    expect(built).toHaveLength(2);
+    expect(built[0].destroyCalls).toBe(1); // the stale instance never went live
+    expect(built[0].listening).toBe(false);
+    expect(built[1].config.redemptionMs).toBe(700);
+    expect(built[1].listening).toBe(true);
   });
 });

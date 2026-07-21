@@ -35,7 +35,8 @@ import { transcribe } from '@/lib/stt'
 import { runChat } from '@/lib/chat/client'
 import { createRecorder } from '@/lib/audio/recorder'
 import { createPushToTalk, type PushToTalkController } from '@/lib/audio/push-to-talk'
-import { createVad, DEFAULT_REDEMPTION_MS, type VadController } from '@/lib/audio/vad'
+import { createVad, type VadController } from '@/lib/audio/vad'
+import { vadRedemptionMs } from '@/lib/conversation'
 import { toLine } from '@/lib/latency'
 import type { MouthState } from '@/components/agent-face'
 import type { FaceSkin } from '@/lib/face/skin'
@@ -88,13 +89,29 @@ function buildRig(): OrchestratorRig {
     },
   })
 
+  // The live hands-free pause (VAD redemption) from settings. One source of
+  // truth for BOTH the detector and the latency instrumentation below.
+  const vadTail = () => vadRedemptionMs(conversation.getState().settings.vadRedemption)
+
   // HALF-DUPLEX: the VAD suppresses itself while the face speaks (see
   // lib/audio/vad.ts) — echo of the reply must never reach submitAudio.
   // Interrupting mid-reply is a UI action (Esc / STOP / the talk controls).
-  const vad = createVad({
-    onSpeechEnd: (segment) =>
-      void orchRef.current?.submitAudio(segment.blob, { source: 'vad' }),
-    onError: (err) => console.warn('[vad]', err),
+  const vad = createVad(
+    {
+      onSpeechEnd: (segment) =>
+        void orchRef.current?.submitAudio(segment.blob, { source: 'vad' }),
+      onError: (err) => console.warn('[vad]', err),
+    },
+    { redemptionMs: vadTail() },
+  )
+
+  // The settings knob retunes the live detector (rebuild is handled inside).
+  let lastTail = vadTail()
+  const unsubscribeTail = conversation.subscribe(() => {
+    const ms = vadTail()
+    if (ms === lastTail) return
+    lastTail = ms
+    vad.setRedemptionMs(ms)
   })
 
   const orchestrator = createOrchestrator({
@@ -114,10 +131,13 @@ function buildRig(): OrchestratorRig {
       typeof cancelAnimationFrame !== 'undefined'
         ? (id) => cancelAnimationFrame(id)
         : undefined,
-    // Turn-latency instrumentation: the VAD tail is the redemption constant
-    // (estimated, not measured — see lib/latency.ts), and every finalized turn
-    // emits one scrapeable JSON line for the measurement sessions.
-    vadTailMs: DEFAULT_REDEMPTION_MS,
+    // Turn-latency instrumentation: the VAD tail is the redemption preset
+    // (estimated, not measured — see lib/latency.ts), read LIVE per turn via
+    // this getter so TTFW always matches what the detector actually ran. Every
+    // finalized turn emits one scrapeable JSON line for measurement sessions.
+    get vadTailMs() {
+      return vadTail()
+    },
     onTurnComplete: (t) => console.info('[latency] ' + toLine(t)),
   })
   orchRef.current = orchestrator
@@ -136,6 +156,7 @@ function buildRig(): OrchestratorRig {
     ptt,
     vad,
     dispose() {
+      unsubscribeTail()
       orchestrator.dispose()
       tts.dispose()
       recorder.dispose()
