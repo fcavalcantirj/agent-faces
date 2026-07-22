@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   createConversationStore,
   CONVERSATION_STORAGE_KEY,
+  CONVERSATION_STORAGE_VERSION,
   MAX_HISTORY_CHARS,
   type StorageLike,
 } from '@/lib/conversation'
@@ -67,7 +68,7 @@ describe('conversation store', () => {
   it('getServerState ignores persisted storage and returns the pristine default', () => {
     const seeded = memoryStorage({
       [CONVERSATION_STORAGE_KEY]: JSON.stringify({
-        version: 1,
+        version: CONVERSATION_STORAGE_VERSION,
         turns: [{ id: 't1', role: 'user', content: 'persisted!', at: 1 }],
         settings: { inputMode: 'hands-free' },
         system: 'custom persona',

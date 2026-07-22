@@ -273,17 +273,27 @@ describe('agent-bridge adapter — hermes session-header flow', () => {
     expect(h1['X-Hermes-Session-Id']).toBeUndefined()
     const b1 = JSON.parse(calls[0].init.body as string)
     expect(b1.stream).toBe(true)
-    expect(b1.messages).toEqual([
-      { role: 'system', content: 'face persona' },
-      { role: 'user', content: 'c' },
-    ])
+    // Persona is SERVER-AUTHORITATIVE for a Hermes brain: the client-supplied
+    // 'face persona' is IGNORED and the adapter injects the current
+    // identity-preserving persona, so a stale browser (cached bundle / old
+    // localStorage) can never override who the agent is.
+    expect(b1.messages).toHaveLength(2)
+    expect(b1.messages[0].role).toBe('system')
+    expect(b1.messages[0].content).toContain('Keep your own identity')
+    expect(b1.messages[0].content).not.toBe('face persona')
+    expect(b1.messages[1]).toEqual({ role: 'user', content: 'c' })
 
     // Second turn: the captured id rides along — the agent keeps the thread.
     await collect(adapter.streamChat({ messages: [{ role: 'user', content: 'd' }] }, env))
     const h2 = calls[1].init.headers as Record<string, string>
     expect(h2['X-Hermes-Session-Id']).toBe('api-abc123')
     const b2 = JSON.parse(calls[1].init.body as string)
-    expect(b2.messages).toEqual([{ role: 'user', content: 'd' }])
+    // Every turn re-affirms the delivery persona (server-authoritative), then
+    // the latest user turn; the session id carries the thread server-side.
+    expect(b2.messages).toHaveLength(2)
+    expect(b2.messages[0].role).toBe('system')
+    expect(b2.messages[0].content).toContain('Keep your own identity')
+    expect(b2.messages[1]).toEqual({ role: 'user', content: 'd' })
   })
 
   it('tolerates a server that returns no session header (falls back to stateless turns)', async () => {

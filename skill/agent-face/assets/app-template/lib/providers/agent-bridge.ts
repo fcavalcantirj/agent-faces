@@ -35,6 +35,7 @@ import {
   type ProviderEnv,
   type StreamEvent,
 } from '@/lib/providers/types'
+import { DEFAULT_PERSONA_PROMPT } from '@/lib/persona'
 
 /** Stable registry id + label. */
 const ID = 'agent-bridge'
@@ -401,9 +402,16 @@ export function createAgentBridgeAdapter(deps: AgentBridgeAdapterDeps = {}): Cha
     model: string | undefined,
     req: ChatRequest,
   ): AsyncIterable<StreamEvent> {
-    const messages: Array<{ role: 'system' | 'user'; content: string }> = []
-    if (req.system) messages.push({ role: 'system', content: req.system })
-    messages.push({ role: 'user', content: lastUserContent(req.messages) })
+    // A Hermes brain OWNS its identity/soul server-side. The client-supplied
+    // system prompt is delivery guidance ONLY — never an identity to adopt — and
+    // a stale browser (cached bundle / old localStorage) can ship an outdated
+    // one. So the persona is SERVER-AUTHORITATIVE: we always use the current
+    // identity-preserving persona and ignore whatever the client sent, so no
+    // browser state can override who the agent is.
+    const messages: Array<{ role: 'system' | 'user'; content: string }> = [
+      { role: 'system', content: DEFAULT_PERSONA_PROMPT },
+      { role: 'user', content: lastUserContent(req.messages) },
+    ]
     const body: Record<string, unknown> = {
       model: model || 'hermes-agent',
       messages,

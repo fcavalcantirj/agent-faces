@@ -130,7 +130,7 @@ export interface StorageLike {
 }
 
 /** Versioned localStorage key — bumping the version invalidates old blobs. */
-export const CONVERSATION_STORAGE_VERSION = 1
+export const CONVERSATION_STORAGE_VERSION = 2
 export const CONVERSATION_STORAGE_KEY = 'agent-face:conversation:v1'
 
 /**

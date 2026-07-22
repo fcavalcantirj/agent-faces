@@ -130,6 +130,19 @@ describe('adapter registry', () => {
     expect(selectDefaultAdapter({})).toBeUndefined()
   })
 
+  it('selectDefaultAdapter prefers an available agent-bridge over any Mode-A brain', () => {
+    // The bridge is an explicit bring-your-own-agent wiring; it should win the
+    // default even when a hosted Mode-A key is also present (e.g. GROQ_API_KEY
+    // that is really there for Whisper STT).
+    register(makeFakeAdapter('groq', { requiredKey: 'GROQ_API_KEY' }))
+    register(makeFakeAdapter('anthropic', { requiredKey: 'ANTHROPIC_API_KEY' }))
+    register(makeFakeAdapter('agent-bridge', { requiredKey: 'AGENT_BRIDGE_URL' }))
+    const env = { GROQ_API_KEY: 'g', ANTHROPIC_API_KEY: 'a', AGENT_BRIDGE_URL: 'http://x' }
+    expect(selectDefaultAdapter(env)?.id).toBe('agent-bridge')
+    // Bridge absent -> falls back to the documented Mode-A priority.
+    expect(selectDefaultAdapter({ GROQ_API_KEY: 'g', ANTHROPIC_API_KEY: 'a' })?.id).toBe('anthropic')
+  })
+
   it('a registered FakeAdapter streams deltas then done', async () => {
     const fake = makeFakeAdapter('fake-stream')
     register(fake)

@@ -92,12 +92,19 @@ export function listAvailableAdapters(env: ProviderEnv = process.env): ChatAdapt
 }
 
 /**
- * The default brain when the user has not explicitly picked one: the first
- * available adapter in the documented priority order (Anthropic > OpenRouter >
- * Groq > agent-bridge). Returns `undefined` when no brain is configured.
+ * The default brain when the user has not explicitly picked one.
+ *
+ * A Mode-B agent-bridge is an EXPLICIT, intentional wiring — the operator stood
+ * up their own running agent (with its own identity, memory, and tools) and
+ * pointed the face at it. That is a stronger signal of intent than a hosted
+ * Mode-A key that may only be present for a side capability (e.g. GROQ_API_KEY
+ * is dual-use: it lights up Groq-as-brain AND Whisper STT). So when the bridge
+ * is available it wins the default; otherwise fall back to the documented
+ * Mode-A priority order (Anthropic > OpenRouter > Groq).
  */
 export function selectDefaultAdapter(env: ProviderEnv = process.env): ChatAdapter | undefined {
-  return listAvailableAdapters(env)[0]
+  const available = listAvailableAdapters(env)
+  return available.find((a) => a.id === 'agent-bridge') ?? available[0]
 }
 
 /**
