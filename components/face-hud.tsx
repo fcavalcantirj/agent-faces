@@ -71,8 +71,9 @@ export function FaceHud({
 
       {/* side readouts — TOP-RIGHT under the header, mirroring the transcript
           panel top-left; the bottom corners belong to SPEAK FREELY (left) and
-          the control cluster (right). */}
-      <div className="flex justify-end px-4 pt-4 md:px-6">
+          the control cluster (right). Hidden on mobile: these diagnostics would
+          overlap the transcript on a narrow viewport (see issue #3). */}
+      <div className="hidden justify-end px-4 pt-4 md:flex md:px-6">
         <div className="flex flex-col gap-2">
         <dl className="flex flex-col gap-1 text-[10px] tracking-wider text-muted-foreground">
           <div className="flex gap-2">
@@ -114,10 +115,12 @@ export function FaceHud({
         </div>
       </div>
 
-      {/* emotion controls */}
+      {/* emotion controls — a manual override grid. Hidden on mobile (issue #3):
+          12 buttons wrap into 2–3 rows and climb into the control cluster; the
+          face auto-emotes from replies, so this is a desktop power-feature. */}
       <nav
         aria-label="Emotion states"
-        className="pointer-events-auto mt-auto flex flex-wrap justify-center gap-1 border-t border-border/60 px-2 py-3 md:gap-2"
+        className="pointer-events-auto mt-auto hidden flex-wrap justify-center gap-1 border-t border-border/60 px-2 py-3 md:flex md:gap-2"
       >
         {EMOTIONS.map((em) => {
           const m = EMOTION_META[em]

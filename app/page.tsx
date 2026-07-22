@@ -112,7 +112,7 @@ export default function Home() {
       {/* Live transcript panel (updates token-by-token during the stream) —
           top-left, its original home, allowed up to half the screen. */}
       {turns.length > 0 ? (
-        <div className="pointer-events-none absolute left-4 top-20 z-30 flex max-h-[50vh] w-72 flex-col gap-2 overflow-y-auto font-mono text-xs md:left-6">
+        <div className="pointer-events-none absolute left-4 top-20 z-30 flex max-h-[40vh] w-[min(80vw,18rem)] flex-col gap-2 overflow-y-auto font-mono text-xs md:left-6 md:max-h-[50vh]">
           {turns.slice(-6).map((t) => (
             <div
               key={t.id}
@@ -185,7 +185,7 @@ export default function Home() {
             toggleHandsFree()
           }
         }}
-        className={`pointer-events-auto absolute bottom-24 left-4 z-40 flex select-none items-center gap-2 rounded-sm border px-3 py-2 font-mono text-[10px] tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-40 md:left-6 ${
+        className={`pointer-events-auto absolute bottom-24 left-4 z-40 hidden select-none items-center gap-2 rounded-sm border px-3 py-2 font-mono text-[10px] tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-40 md:left-6 md:flex ${
           handsFree && listening
             ? 'border-accent bg-accent/20 text-accent'
             : 'border-border/60 text-muted-foreground hover:border-accent hover:text-foreground'
@@ -202,8 +202,11 @@ export default function Home() {
         {handsFree && listening ? 'SPEAK FREELY — TAP TO STOP' : 'SPEAK FREELY'}
       </button>
 
-      {/* Control cluster — bottom-RIGHT so nothing sits on top of the face. */}
-      <div className="pointer-events-none absolute bottom-24 right-4 z-40 flex w-72 flex-col gap-2 md:right-6">
+      {/* Control cluster — desktop: bottom-RIGHT so nothing sits on the face.
+          Mobile (issue #3): a single full-width bar pinned near the bottom, with
+          the emotion nav + telemetry + hands-free pill hidden, so the PTT/STOP
+          row and the text input never collide with anything. */}
+      <div className="pointer-events-none absolute inset-x-4 bottom-6 z-40 flex flex-col gap-2 pb-[env(safe-area-inset-bottom)] md:inset-x-auto md:right-6 md:bottom-24 md:w-72 md:pb-0">
         <div className="pointer-events-auto flex w-full items-center gap-2">
           <button
             type="button"
