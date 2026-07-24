@@ -3541,3 +3541,31 @@ EXIT=0; npm test EXIT=0; npm run verify EXIT=0; npm run verify:linux EXIT=0
 (README/SKILL.md are not templated — no sync needed).
 UAT: [skill-install] unchanged — dasbrow's redeploys (room #683) exercise the loud
 path for real.
+
+2026-07-24: [merge] LAUNCH STEP ZERO — dasbrow's two stranded fixes are on public main
+(the launch blocker from the promo agent's sequence). The branches lived only on
+brownet-coder (no push credentials there); fetched over tailnet SSH
+(browbot@brownet-coder:agent-faces), REVIEWED in full before touching main, rebased
+onto current main (they were cut from 70c94e4, two commits behind — no file overlap,
+clean replay), fast-forwarded, gated, pushed:
+• eea3b5e fix(mode-b): bridged agent keeps its OWN identity (closes #2) —
+  selectDefaultAdapter now prefers an available agent-bridge over Mode-A keys (a
+  GROQ_API_KEY present only for Whisper STT no longer steals the default);
+  DEFAULT_PERSONA_PROMPT rewritten identity-preserving (delivery rules, not a
+  character); hermes path sends the persona SERVER-authoritatively (constant per
+  turn — verified compatible with the warm bridge session: claude-code systemText
+  stays byte-stable, one recycle-with-resume per rig on first post-upgrade turn);
+  CONVERSATION_STORAGE_VERSION 1→2 (deliberate blob wipe: old generic persona +
+  pinned Groq selections dropped; the HANDS-FREE PAUSE knob heals to snappy by
+  normalizer as designed).
+• abd6a29 fix(mobile): responsive reflow of the home screen (closes #3) — under md:
+  telemetry readouts + emotion-override grid hidden, control cluster becomes a
+  full-width bottom bar w/ safe-area padding; desktop unchanged at md+.
+Both commits carried their own tests + template mirrors (parity gate confirms).
+Verify (all RUN on the MERGED tree, $? captured directly — an earlier gate run
+pre-dated the merge and was discarded): npm test EXIT=0; npm run verify EXIT=0;
+npm run verify:linux EXIT=0.
+NOTE: the first merge attempt refused to fast-forward (branches based two commits
+back) — diagnosed via merge-base, rebased, re-gated. Steps 2-4 of the launch
+sequence (copy drafts, awesome-lists, Vercel config, posting) are the promo agent's
+lane and Felipe's calls.
